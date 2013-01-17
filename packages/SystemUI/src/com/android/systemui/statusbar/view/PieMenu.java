@@ -196,6 +196,7 @@ public class PieMenu extends FrameLayout {
     private ViewManager mPanelParent;
     private ScrollView mScrollView;
     private View mContainer;
+    private View mContentFrame;
     private boolean mPanelParentChanged;
 
     /**
@@ -330,6 +331,7 @@ public class PieMenu extends FrameLayout {
         LayoutInflater inflater = (LayoutInflater) mContext
                 .getSystemService(Context.LAYOUT_INFLATER_SERVICE); 
         mContainer = inflater.inflate(R.layout.pie_notification_panel, null);
+        mContentFrame = (View) mContainer.findViewById(R.id.content_frame);
         mScrollView = (ScrollView) mContainer.findViewById(R.id.notification_scroll);
 
         mLastBackgroundColor = new ColorUtils.ColorSettingInfo();
@@ -656,7 +658,7 @@ public class PieMenu extends FrameLayout {
         mOutroAnimation.addUpdateListener(new AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
-                mBackgroundOpacity = (int)((1 - animation.getAnimatedFraction()) * currentOpacity);
+                mBackgroundOpacity = (int)((1 - animation.getAnimatedFraction()) * currentOpacity);                
                 mTextAlpha =  (int)((1 - animation.getAnimatedFraction()) * currentAlpha);
                 invalidate();
             }
@@ -955,7 +957,21 @@ public class PieMenu extends FrameLayout {
                     mScrollView.addView(mPanel.getBar().getNotificationRowLayout());
                     mWindowManager.addView(mContainer, lp);
                     mPanelParentChanged = true;
-                    mVibrator.vibrate(5);
+                    mVibrator.vibrate(2);
+
+                    mContentFrame.setBackgroundColor(mBackgroundOpacity);
+                    ValueAnimator mAlphaAnimation  = ValueAnimator.ofInt(0, 1);
+                    mAlphaAnimation.addUpdateListener(new AnimatorUpdateListener() {
+                        @Override
+                        public void onAnimationUpdate(ValueAnimator animation) {
+                            mScrollView.setX(-(int)((1-animation.getAnimatedFraction()) * getWidth()*1.5));
+                            mContentFrame.setBackgroundColor( (int)(animation.getAnimatedFraction() * 0xDD) << 24);
+                            invalidate();
+                        }
+                    });
+                    mAlphaAnimation.setDuration(1000);
+                    mAlphaAnimation.setInterpolator(new DecelerateInterpolator());
+                    mAlphaAnimation.start();
                 }
       
 
@@ -1000,7 +1016,7 @@ public class PieMenu extends FrameLayout {
 
                 // Check for click actions
                 if (item != null && item.getView() != null && pieTreshold) {
-                    mVibrator.vibrate(5);
+                    mVibrator.vibrate(2);
                     item.getView().performClick();
 
                 }
@@ -1017,6 +1033,8 @@ public class PieMenu extends FrameLayout {
             
             // Trigger the shade?
             if (!mPanelActive && distance > shadeTreshold) {
+                // Give the user a small hint that he's inside the upper touch area
+                mVibrator.vibrate(2);
                 mPanelActive = true;           
                 return true;
             }
