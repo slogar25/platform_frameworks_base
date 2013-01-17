@@ -570,7 +570,6 @@ public class PieMenu extends FrameLayout {
     int mBatteryMeter;
 
     private void animateIn() {
-
         // Reset base values
         mBatteryMeter = 0;
         mBatteryBackgroundAlpha = 0;
@@ -582,6 +581,17 @@ public class PieMenu extends FrameLayout {
             mCharOffset[i] = 1000;
         }
 
+        // Decides the color of battery bar, depending on battery level
+        final int batteryLevel = mPolicy.getBatteryLevel();
+        if(batteryLevel <= PiePolicy.LOW_BATTERY_LEVEL
+                && batteryLevel > PiePolicy.CRITICAL_BATTERY_LEVEL) {
+            mBatteryJuice.setColor(0xffbb33);
+        } else if(batteryLevel <= PiePolicy.CRITICAL_BATTERY_LEVEL) {
+            mBatteryJuice.setColor(0xff4444);
+        } else {
+            mBatteryJuice.setColor(0x33b5e5);
+        }
+
         // Background
         mIntoAnimation = ValueAnimator.ofInt(0, 1);
         mIntoAnimation.addUpdateListener(new AnimatorUpdateListener() {
@@ -589,7 +599,7 @@ public class PieMenu extends FrameLayout {
             public void onAnimationUpdate(ValueAnimator animation) {
                 mBackgroundOpacity = (int)(animation.getAnimatedFraction() * BACKGROUND_COLOR);
                 mBatteryBackgroundAlpha = (int)(animation.getAnimatedFraction() * 0x55);
-                mBatteryJuiceAlpha = (int)(animation.getAnimatedFraction() * 0x88);                
+                mBatteryJuiceAlpha = (int)(animation.getAnimatedFraction() * 0x88);
                 invalidate();
             }
         });
@@ -602,7 +612,7 @@ public class PieMenu extends FrameLayout {
         animation.addUpdateListener(new AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
-                mBatteryMeter = (int)(animation.getAnimatedFraction() * mPolicy.getBatteryLevel());             
+                mBatteryMeter = (int)(animation.getAnimatedFraction() * batteryLevel);
                 invalidate();
             }
         });
@@ -878,7 +888,7 @@ public class PieMenu extends FrameLayout {
         float x = evt.getX();
         float y = evt.getY();
         int orient = mPanel.getOrientation();
-        int distance = (int)Math.abs(orient == Gravity.TOP || orient == Gravity.BOTTOM ? y : x);    
+        int distance = (int)Math.abs(orient == Gravity.TOP || orient == Gravity.BOTTOM ? y : x);
         int action = evt.getActionMasked();
 
         if (MotionEvent.ACTION_DOWN == action) {
