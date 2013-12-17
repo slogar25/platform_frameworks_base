@@ -52,7 +52,35 @@ public class Clock extends TextView implements DemoMode {
     private static final int AM_PM_STYLE_SMALL   = 1;
     private static final int AM_PM_STYLE_GONE    = 2;
 
+
     private static final int AM_PM_STYLE = AM_PM_STYLE_GONE;
+
+    private int AM_PM_STYLE = AM_PM_STYLE_GONE;
+
+    private Context mContext;
+    private boolean mShowAlways;
+
+    class SettingsObserver extends ContentObserver {
+        SettingsObserver(Handler handler) {
+            super(handler);
+        }
+
+        void observe() {
+            ContentResolver resolver = mContext.getContentResolver();
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.STATUS_BAR_SHOW_CLOCK), false, this);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.STATUS_BAR_AM_PM_STYLE), false, this);
+        }
+
+        @Override public void onChange(boolean selfChange) {
+            // showAlways is only set on expanded statusbar, we must avoid
+            // to hide clock or add AM/PM there
+            if(!mShowAlways) updateParameters();
+            updateClock();
+        }
+    }
+
 
     public Clock(Context context) {
         this(context, null);
@@ -64,6 +92,17 @@ public class Clock extends TextView implements DemoMode {
 
     public Clock(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
+
+
+        mContext = context;
+        TypedArray a = context.obtainStyledAttributes(attrs, com.android.systemui.R.styleable.Clock, defStyle, 0);
+        mShowAlways = a.getBoolean(com.android.systemui.R.styleable.Clock_showAlways, false);
+
+        updateParameters();
+
+        SettingsObserver observer = new SettingsObserver(new Handler());
+        observer.observe();
+
     }
 
     @Override
@@ -92,6 +131,15 @@ public class Clock extends TextView implements DemoMode {
         // Make sure we update to the current time
         updateClock();
     }
+
+
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        startBroadcastReceiver();
+    }
+
 
     @Override
     protected void onDetachedFromWindow() {
@@ -123,10 +171,23 @@ public class Clock extends TextView implements DemoMode {
         }
     };
 
+    private void updateParameters() {
+        setVisibility((Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUS_BAR_SHOW_CLOCK, 1) == 1) ? View.VISIBLE : View.GONE);
+        AM_PM_STYLE = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUS_BAR_AM_PM_STYLE, 2);
+        mClockFormatString = null;
+    }
+
     final void updateClock() {
         if (mDemoMode) return;
         mCalendar.setTimeInMillis(System.currentTimeMillis());
+
         setText(getSmallTime());
+
+        CharSequence seq = getSmallTime();
+        setText(seq);
+
     }
 
     private final CharSequence getSmallTime() {
