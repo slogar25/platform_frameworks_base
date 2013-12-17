@@ -2519,6 +2519,285 @@ public final class Settings {
         /**
          * @deprecated Use {@link android.provider.Settings.Global#HTTP_PROXY} instead
          */
+
+
+        public static final String STATUS_ICON_COLOR = "status_icon_color";
+
+        /**
+         * Statusbar State
+         * The value is boolean (1 or 0).
+         * @hide
+         */
+        public static final String EXPANDED_DESKTOP_STATE = "expanded_desktop_state";
+
+        /**
+         * Whether to enable or not pie controls
+         * The value is boolean (1 or 0).
+         * @hide
+         */
+        public static final String PIE_CONTROLS = "pie_controls";
+
+        /**
+         * User Interface State
+         * 1 = Rebuild UI, resets to 0 automatically
+         * @hide
+         */
+        public static final String USER_INTERFACE_STATE = "user_interface_state";
+
+        /**	
+         * Allows to show the background activity back the lockscreen
+         * The value is boolean (1 or 0).
+         * @hide
+         */
+        public static final String LOCKSCREEN_SEE_THROUGH = "lockscreen_see_through";
+
+        /**	
+         * Allows lockscreen to be rotated
+         * The value is boolean (1 or 0).
+         * @hide
+         */
+        public static final String LOCKSCREEN_ALLOW_ROTATION = "lockscreen_allow_rotation";
+
+        /**	
+         * Allows lockscreen to show homescreen widgets
+         * The value is boolean (1 or 0).
+         * @hide
+         */
+        public static final String HOME_SCREEN_WIDGETS = "home_screen_widgets";
+
+        /**
+         * Whether to wake the screen with the volume keys, the value is boolean.
+         * @hide
+         */
+        public static final String VOLUME_WAKE_SCREEN = "volume_wake_screen";
+
+        /**
+         * Whether or not volume button music controls should be enabled to seek media tracks
+         * @hide
+         */
+        public static final String VOLBTN_MUSIC_CONTROLS = "volbtn_music_controls";
+
+        /**	
+         * Defines the shortcuts to be shown on lockscreen
+         * Usage is like this: target:icon|target:icon|target:icon
+         * if :icon is not set, default application icon will be used
+         * @hide
+         */
+        public static final String LOCKSCREEN_TARGETS = "lockscreen_targets";
+
+        /**
+         * Allows to define the limit notifcations once per X seconds
+         * The value is a an integer in milliseconds.
+         * @hide
+         */
+        public static final String NOTIFICATION_SOUND_LIMITER_THRESHOLD = "notification_sound_limiter_threshold";
+
+        /**
+         * Show the pending notification counts as overlays on the status bar
+         * @hide
+         */
+        public static final String STATUS_BAR_NOTIF_COUNT = "status_bar_notif_count";
+
+        /**
+         * Show the notification ticker (or not)
+         * @hide
+         */
+        public static final String STATUS_BAR_DONOTDISTURB = "status_bar_donotdisturb";
+
+        /**
+         * Maximal notification count as overlays on the status bar
+         * @hide
+         */
+        public static final String MAX_NOTIFICATION_ICONS = "max_notification_icons";
+
+        /**	
+         * Whether to show or not clock on statusbar
+         * The value is boolean (1 or 0).
+         * @hide
+         */
+        public static final String STATUS_BAR_SHOW_CLOCK = "status_bar_show_clock";
+
+        /**	
+         * AM/PM style on statusbar, either normal, small or gone.
+         *  0 = Normal
+         *  1 = Small
+         *  2 = Gone (default)
+         * @hide
+         */
+        public static final String STATUS_BAR_AM_PM_STYLE = "status_bar_am_pm_style";
+
+        /**
+         * Quick Settings Panel Tiles to Use
+         * @hide
+         */
+        public static final String QUICK_SETTINGS_TILES = "quick_settings_tiles";
+
+        /**
+         * QuickSettings panel dynamic alarm tile
+         * @hide
+         */
+        public static final String QS_DYNAMIC_ALARM = "qs_dyanmic_alarm";
+
+        /**
+         * QuickSettings panel dynamic bug-report tile
+         * @hide
+         */
+        public static final String QS_DYNAMIC_BUGREPORT = "qs_dyanmic_bugreport";
+
+        /**
+         * QuickSettings panel dynamic IME tile
+         * @hide
+         */
+        public static final String QS_DYNAMIC_IME = "qs_dyanmic_ime";
+
+        /**
+         * QuickSettings panel dynamic wifi tile
+         * @hide
+         */
+        public static final String QS_DYNAMIC_WIFI = "qs_dyanmic_wifi";
+
+        /**
+        * Custom Network Mode
+        * @hide
+        */
+        public static final String EXPANDED_NETWORK_MODE = "expanded_network_mode";
+        
+        /**
+        * Custom Ring Mode
+        * @hide
+        */
+        public static final String EXPANDED_RING_MODE = "expanded_ring_mode";
+
+        /**
+         * Volume keys control cursor in text fields (default is 0)
+         * 0 - Disabled
+         * 1 - Volume up/down moves cursor left/right
+         * 2 - Volume up/down moves cursor right/left
+         * @hide
+         */
+        public static final String VOLUME_KEY_CURSOR_CONTROL = "volume_key_cursor_control";
+
+        /**
+         * Settings to backup. This is here so that it's in the same place as the settings
+         * keys and easy to update.
+         *
+         * NOTE: Settings are backed up and restored in the order they appear
+         *       in this array. If you have one setting depending on another,
+         *       make sure that they are ordered appropriately.
+         *
+         * @hide
+         */
+        public static final String[] SETTINGS_TO_BACKUP = {
+            STAY_ON_WHILE_PLUGGED_IN,   // moved to global
+            WIFI_USE_STATIC_IP,
+            WIFI_STATIC_IP,
+            WIFI_STATIC_GATEWAY,
+            WIFI_STATIC_NETMASK,
+            WIFI_STATIC_DNS1,
+            WIFI_STATIC_DNS2,
+            BLUETOOTH_DISCOVERABILITY,
+            BLUETOOTH_DISCOVERABILITY_TIMEOUT,
+            DIM_SCREEN,
+            SCREEN_OFF_TIMEOUT,
+            SCREEN_BRIGHTNESS,
+            SCREEN_BRIGHTNESS_MODE,
+            SCREEN_AUTO_BRIGHTNESS_ADJ,
+            VIBRATE_INPUT_DEVICES,
+            MODE_RINGER,                // moved to global
+            MODE_RINGER_STREAMS_AFFECTED,
+            MUTE_STREAMS_AFFECTED,
+            VOLUME_VOICE,
+            VOLUME_SYSTEM,
+            VOLUME_RING,
+            VOLUME_MUSIC,
+            VOLUME_ALARM,
+            VOLUME_NOTIFICATION,
+            VOLUME_BLUETOOTH_SCO,
+            VOLUME_VOICE + APPEND_FOR_LAST_AUDIBLE,
+            VOLUME_SYSTEM + APPEND_FOR_LAST_AUDIBLE,
+            VOLUME_RING + APPEND_FOR_LAST_AUDIBLE,
+            VOLUME_MUSIC + APPEND_FOR_LAST_AUDIBLE,
+            VOLUME_ALARM + APPEND_FOR_LAST_AUDIBLE,
+            VOLUME_NOTIFICATION + APPEND_FOR_LAST_AUDIBLE,
+            VOLUME_BLUETOOTH_SCO + APPEND_FOR_LAST_AUDIBLE,
+            TEXT_AUTO_REPLACE,
+            TEXT_AUTO_CAPS,
+            TEXT_AUTO_PUNCTUATE,
+            TEXT_SHOW_PASSWORD,
+            AUTO_TIME,                  // moved to global
+            AUTO_TIME_ZONE,             // moved to global
+            TIME_12_24,
+            DATE_FORMAT,
+            DTMF_TONE_WHEN_DIALING,
+            DTMF_TONE_TYPE_WHEN_DIALING,
+            HEARING_AID,
+            TTY_MODE,
+            SOUND_EFFECTS_ENABLED,
+            HAPTIC_FEEDBACK_ENABLED,
+            POWER_SOUNDS_ENABLED,       // moved to global
+            DOCK_SOUNDS_ENABLED,        // moved to global
+            LOCKSCREEN_SOUNDS_ENABLED,
+            SHOW_WEB_SUGGESTIONS,
+            NOTIFICATION_LIGHT_PULSE,
+            SIP_CALL_OPTIONS,
+            SIP_RECEIVE_CALLS,
+            POINTER_SPEED,
+            VIBRATE_WHEN_RINGING
+        };
+
+        /**
+         * Insecure settings can be set on any context, without any
+         * importance of permission level
+         *
+         * @hide
+         */
+        public static final String[] INSECURE_SETTINGS = {
+            EXPANDED_DESKTOP_STATE,
+            PER_APP_COLOR,
+            NAV_BAR_COLOR,
+            NAV_BUTTON_COLOR,
+            NAV_GLOW_COLOR,
+            STATUS_BAR_COLOR,
+            STATUS_ICON_COLOR
+        };
+
+        // Settings moved to Settings.Secure
+
+        /**
+         * @deprecated Use {@link android.provider.Settings.Global#ADB_ENABLED}
+         * instead
+         */
+        @Deprecated
+        public static final String ADB_ENABLED = Global.ADB_ENABLED;
+
+        /**
+         * @deprecated Use {@link android.provider.Settings.Secure#ANDROID_ID} instead
+         */
+        @Deprecated
+        public static final String ANDROID_ID = Secure.ANDROID_ID;
+
+        /**
+         * @deprecated Use {@link android.provider.Settings.Global#BLUETOOTH_ON} instead
+         */
+        @Deprecated
+        public static final String BLUETOOTH_ON = Global.BLUETOOTH_ON;
+
+        /**
+         * @deprecated Use {@link android.provider.Settings.Global#DATA_ROAMING} instead
+         */
+        @Deprecated
+        public static final String DATA_ROAMING = Global.DATA_ROAMING;
+
+        /**
+         * @deprecated Use {@link android.provider.Settings.Global#DEVICE_PROVISIONED} instead
+         */
+        @Deprecated
+        public static final String DEVICE_PROVISIONED = Global.DEVICE_PROVISIONED;
+
+        /**
+         * @deprecated Use {@link android.provider.Settings.Global#HTTP_PROXY} instead
+         */
+
         @Deprecated
         public static final String HTTP_PROXY = Global.HTTP_PROXY;
 

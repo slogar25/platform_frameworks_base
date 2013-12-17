@@ -127,9 +127,34 @@ public abstract class BaseStatusBar extends SystemUI implements
     private Locale mLocale;
     protected boolean mUseHeadsUp = false;
 
+
     protected IDreamManager mDreamManager;
     PowerManager mPowerManager;
     protected int mRowHeight;
+
+    // Pie controls
+    PieControlPanel mPieControlPanel;
+    View mPieControlsTrigger;
+
+    // Policy
+    public NetworkController mNetworkController;
+    public BatteryController mBatteryController;
+    public SignalClusterView mSignalCluster;
+    public Clock mClock;
+
+    // left-hand icons 
+    public LinearLayout mStatusIcons;
+
+    // Statusbar view container
+    public ViewGroup mBarView;
+
+    // Color fields
+    private Canvas mCurrentCanvas;
+    private Canvas mNewCanvas;
+    private TransitionDrawable mTransition;
+    public ColorUtils.ColorSettingInfo mLastIconColor;
+    public ColorUtils.ColorSettingInfo mLastBackgroundColor;
+
 
     // UI-specific methods
 
@@ -230,10 +255,54 @@ public abstract class BaseStatusBar extends SystemUI implements
         mBarService = IStatusBarService.Stub.asInterface(
                 ServiceManager.getService(Context.STATUS_BAR_SERVICE));
 
+
         mRecents = getComponent(RecentsComponent.class);
 
         mLocale = mContext.getResources().getConfiguration().locale;
         mLayoutDirection = TextUtils.getLayoutDirectionFromLocale(mLocale);
+
+        mStatusBarContainer = new FrameLayout(mContext);
+
+        // Quick navigation bar trigger area
+        final Resources res = mContext.getResources();
+        mPieControlsTrigger = new View(mContext);
+        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 
+                res.getDimensionPixelSize(R.dimen.pie_trigger_height),
+                WindowManager.LayoutParams.TYPE_STATUS_BAR_PANEL,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                        | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+                        | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH,
+                PixelFormat.TRANSLUCENT);
+
+        lp.gravity = Gravity.BOTTOM;
+
+        mPieControlsTrigger.setOnTouchListener(new PieControlsTouchListener());
+        mWindowManager.addView(mPieControlsTrigger, lp);
+
+        // Quick navigation bar panel
+        mPieControlPanel = (PieControlPanel) View.inflate(mContext,
+                R.layout.pie_control_panel, null);
+        lp = new WindowManager.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.TYPE_STATUS_BAR_PANEL,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        | WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+                        | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH
+                        | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                PixelFormat.TRANSLUCENT);
+        lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+        lp.setTitle("PieControlPanel");
+        lp.windowAnimations = android.R.style.Animation;
+
+        mPieControlPanel.setBar(this);
+        mPieControlPanel.setHandler(mHandler);
+
+        mWindowManager.addView(mPieControlPanel, lp);
+
 
         // Connect in to the status bar manager service
         StatusBarIconList iconList = new StatusBarIconList();
@@ -296,7 +365,141 @@ public abstract class BaseStatusBar extends SystemUI implements
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_USER_SWITCHED);
+
         mContext.registerReceiver(mBroadcastReceiver, filter);
+
+        mContext.registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                if (Intent.ACTION_USER_SWITCHED.equals(action)) {
+                    mCurrentUserId = intent.getIntExtra(Intent.EXTRA_USER_HANDLE, -1);
+                    if (true) Slog.v(TAG, "userId " + mCurrentUserId + " is in the house");
+                    userSwitched(mCurrentUserId);
+                }
+            }}, filter);
+
+
+        updatePieControlsVisibility();
+        mContext.getContentResolver().registerContentObserver(
+            Settings.System.getUriFor(Settings.System.PIE_CONTROLS), false, new ContentObserver(new Handler()) {
+                @Override
+                public void onChange(boolean selfChange) {
+                    updatePieControlsVisibility();
+                }
+            }
+        );
+
+        // Only watch for per app color changes when the setting is in check
+        if (ColorUtils.getPerAppColorState(mContext)) {
+
+            // Reset all colors
+            Bitmap currentBitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888);
+            mCurrentCanvas = new Canvas(currentBitmap);
+            mCurrentCanvas.drawColor(0xFF000000);
+            BitmapDrawable currentBitmapDrawable = new BitmapDrawable(currentBitmap);
+
+            Bitmap newBitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888);
+            mNewCanvas = new Canvas(newBitmap);
+            mNewCanvas.drawColor(0xFF000000);
+            BitmapDrawable newBitmapDrawable = new BitmapDrawable(newBitmap);
+
+            mTransition = new TransitionDrawable(new Drawable[]{currentBitmapDrawable, newBitmapDrawable});
+            mBarView.setBackground(mTransition);
+
+            mLastIconColor = ColorUtils.getColorSettingInfo(mContext, Settings.System.STATUS_ICON_COLOR);
+            mLastBackgroundColor = ColorUtils.getColorSettingInfo(mContext, ExtendedPropertiesUtils.isTablet()
+                    ? Settings.System.NAV_BAR_COLOR : Settings.System.STATUS_BAR_COLOR);
+
+            updateIconColor();
+            updateBackgroundColor();
+
+            // Listen for status bar icon color changes
+            mContext.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.STATUS_ICON_COLOR), false, new ContentObserver(new Handler()) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        updateIconColor();
+                    }});
+
+            // Listen for status bar background color changes
+            mContext.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(ExtendedPropertiesUtils.isTablet() ?
+                        Settings.System.NAV_BAR_COLOR : Settings.System.STATUS_BAR_COLOR),
+                        false, new ContentObserver(new Handler()) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        updateBackgroundColor();
+                    }});
+
+            // Listen for per-app-color state changes, this one will revert to stock colors all over
+            mContext.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.PER_APP_COLOR),
+                        false, new ContentObserver(new Handler()) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        if (!ColorUtils.getPerAppColorState(mContext)) {
+                            for (int i = 0; i < ExtendedPropertiesUtils.PARANOID_COLORS_COUNT; i++) {
+                                ColorUtils.ColorSettingInfo colorInfo = ColorUtils.getColorSettingInfo(mContext,
+                                        Settings.System.STATUS_ICON_COLOR);
+                                ColorUtils.setColor(mContext, ExtendedPropertiesUtils.PARANOID_COLORS_SETTINGS[i],
+                                        colorInfo.systemColorString, "NULL", 1, 250);
+                            }
+                        }
+                    }});
+        }
+    }
+
+    private void updateIconColor() {
+        ColorUtils.ColorSettingInfo colorInfo = ColorUtils.getColorSettingInfo(mContext,
+                Settings.System.STATUS_ICON_COLOR);
+        if (!colorInfo.lastColorString.equals(mLastIconColor.lastColorString)) {
+            if(mClock != null) mClock.setTextColor(colorInfo.lastColor);
+            if(mSignalCluster != null) mSignalCluster.setColor(colorInfo);
+            if(mBatteryController != null) mBatteryController.setColor(colorInfo);
+            if (mStatusIcons != null) {
+                for(int i = 0; i < mStatusIcons.getChildCount(); i++) {
+                    Drawable iconDrawable = ((ImageView)mStatusIcons.getChildAt(i)).getDrawable();
+                    if (colorInfo.isLastColorNull) {
+                        iconDrawable.clearColorFilter();                        
+                    } else {
+                        iconDrawable.setColorFilter(colorInfo.lastColor, PorterDuff.Mode.SRC_IN);
+                    }
+                }
+            }
+            mLastIconColor = colorInfo;
+        }
+    }
+
+    private void updateBackgroundColor() {
+        ColorUtils.ColorSettingInfo colorInfo = ColorUtils.getColorSettingInfo(mContext,
+                ExtendedPropertiesUtils.isTablet() ? Settings.System.NAV_BAR_COLOR :
+                Settings.System.STATUS_BAR_COLOR);
+        if (!colorInfo.lastColorString.equals(mLastBackgroundColor.lastColorString)) {
+            // Only enable crossfade for transparent backdrops
+            mTransition.setCrossFadeEnabled(!colorInfo.isLastColorOpaque);
+
+            // Clear first layer, paint current color, reset transition to first layer
+            mCurrentCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+            mCurrentCanvas.drawColor(mLastBackgroundColor.lastColor);
+            mTransition.resetTransition();
+
+            // Clear second layer, paint new color, start transition
+            mNewCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+            mNewCanvas.drawColor(colorInfo.lastColor);
+            mTransition.startTransition(colorInfo.speed);
+
+            // Remember for later
+            mLastBackgroundColor = colorInfo;
+        }
+    }
+
+    public void updatePieControlsVisibility() {
+        ContentResolver resolver = mContext.getContentResolver();
+        boolean show = Settings.System.getInt(resolver,
+                Settings.System.PIE_CONTROLS, 0) == 1;
+        mPieControlsTrigger.setVisibility(show ? View.VISIBLE : View.GONE);
+
     }
 
     public void userSwitched(int newUserId) {
@@ -501,6 +704,183 @@ public abstract class BaseStatusBar extends SystemUI implements
     }
 
     protected abstract View getStatusBarView();
+
+
+
+    protected boolean isRecentAppsVisible() {
+        return RecentsActivity.isActivityShowing();
+    }
+
+    protected boolean hasRecentApps() {
+        return RecentsActivity.getTasks() > 0;
+    }
+
+    protected void toggleRecentsActivity() {
+        try {
+
+            TaskDescription firstTask = RecentTasksLoader.getInstance(mContext).getFirstTask();
+
+            Intent intent = new Intent(RecentsActivity.TOGGLE_RECENTS_INTENT);
+            intent.setClassName("com.android.systemui",
+                    "com.android.systemui.recent.RecentsActivity");
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+
+            if (firstTask == null) {
+                if (RecentsActivity.forceOpaqueBackground(mContext)) {
+                    ActivityOptions opts = ActivityOptions.makeCustomAnimation(mContext,
+                            R.anim.recents_launch_from_launcher_enter,
+                            R.anim.recents_launch_from_launcher_exit);
+                    mContext.startActivityAsUser(intent, opts.toBundle(), new UserHandle(
+                            UserHandle.USER_CURRENT));
+                } else {
+                    // The correct window animation will be applied via the activity's style
+                    mContext.startActivityAsUser(intent, new UserHandle(
+                            UserHandle.USER_CURRENT));
+                }
+
+            } else {
+                Bitmap first = firstTask.getThumbnail();
+                final Resources res = mContext.getResources();
+
+                float thumbWidth = res
+                        .getDimensionPixelSize(R.dimen.status_bar_recents_thumbnail_width);
+                float thumbHeight = res
+                        .getDimensionPixelSize(R.dimen.status_bar_recents_thumbnail_height);
+                if (first == null) {
+                    throw new RuntimeException("Recents thumbnail is null");
+                }
+                if (first.getWidth() != thumbWidth || first.getHeight() != thumbHeight) {
+                    first = Bitmap.createScaledBitmap(first, (int) thumbWidth, (int) thumbHeight,
+                            true);
+                    if (first == null) {
+                        throw new RuntimeException("Recents thumbnail is null");
+                    }
+                }
+
+
+                DisplayMetrics dm = new DisplayMetrics();
+                mDisplay.getMetrics(dm);
+                // calculate it here, but consider moving it elsewhere
+                // first, determine which orientation you're in.
+                // todo: move the system_bar layouts to sw600dp ?
+                final Configuration config = res.getConfiguration();
+                int x, y;
+
+                if (config.orientation == Configuration.ORIENTATION_PORTRAIT) {
+                    float appLabelLeftMargin = res
+                            .getDimensionPixelSize(R.dimen.status_bar_recents_app_label_left_margin);
+                    float appLabelWidth = res
+                            .getDimensionPixelSize(R.dimen.status_bar_recents_app_label_width);
+                    float thumbLeftMargin = res
+                            .getDimensionPixelSize(R.dimen.status_bar_recents_thumbnail_left_margin);
+                    float thumbBgPadding = res
+                            .getDimensionPixelSize(R.dimen.status_bar_recents_thumbnail_bg_padding);
+
+                    float width = appLabelLeftMargin +
+                            +appLabelWidth
+                            + thumbLeftMargin
+                            + thumbWidth
+                            + 2 * thumbBgPadding;
+
+                    x = (int) ((dm.widthPixels - width) / 2f + appLabelLeftMargin + appLabelWidth
+                            + thumbBgPadding + thumbLeftMargin);
+                    y = (int) (dm.heightPixels
+                            - res.getDimensionPixelSize(R.dimen.status_bar_recents_thumbnail_height) - thumbBgPadding);
+                } else { // if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                    float thumbTopMargin = res
+                            .getDimensionPixelSize(R.dimen.status_bar_recents_thumbnail_top_margin);
+                    float thumbBgPadding = res
+                            .getDimensionPixelSize(R.dimen.status_bar_recents_thumbnail_bg_padding);
+                    float textPadding = res
+                            .getDimensionPixelSize(R.dimen.status_bar_recents_text_description_padding);
+                    float labelTextSize = res
+                            .getDimensionPixelSize(R.dimen.status_bar_recents_app_label_text_size);
+                    Paint p = new Paint();
+                    p.setTextSize(labelTextSize);
+                    float labelTextHeight = p.getFontMetricsInt().bottom
+                            - p.getFontMetricsInt().top;
+                    float descriptionTextSize = res
+                            .getDimensionPixelSize(R.dimen.status_bar_recents_app_description_text_size);
+                    p.setTextSize(descriptionTextSize);
+                    float descriptionTextHeight = p.getFontMetricsInt().bottom
+                            - p.getFontMetricsInt().top;
+
+                    float statusBarHeight = res
+                            .getDimensionPixelSize(com.android.internal.R.dimen.status_bar_height);
+                    float recentsItemTopPadding = statusBarHeight;
+
+                    float height = thumbTopMargin
+                            + thumbHeight
+                            + 2 * thumbBgPadding + textPadding + labelTextHeight
+                            + recentsItemTopPadding + textPadding + descriptionTextHeight;
+                    float recentsItemRightPadding = res
+                            .getDimensionPixelSize(R.dimen.status_bar_recents_item_padding);
+                    float recentsScrollViewRightPadding = res
+                            .getDimensionPixelSize(R.dimen.status_bar_recents_right_glow_margin);
+                    x = (int) (dm.widthPixels - res
+                            .getDimensionPixelSize(R.dimen.status_bar_recents_thumbnail_width)
+                            - thumbBgPadding - recentsItemRightPadding - recentsScrollViewRightPadding);
+                    y = (int) ((dm.heightPixels - statusBarHeight - height) / 2f + thumbTopMargin
+                            + recentsItemTopPadding + thumbBgPadding + statusBarHeight);
+                }
+
+                ActivityOptions opts = ActivityOptions.makeThumbnailScaleDownAnimation(
+                        getStatusBarView(),
+                        first, x, y,
+                        new ActivityOptions.OnAnimationStartedListener() {
+                            public void onAnimationStarted() {
+                                Intent intent = new Intent(RecentsActivity.WINDOW_ANIMATION_START_INTENT);
+                                intent.setPackage("com.android.systemui");
+                                mContext.sendBroadcastAsUser(intent, new UserHandle(UserHandle.USER_CURRENT));
+                            }
+                        });
+                intent.putExtra(RecentsActivity.WAITING_FOR_WINDOW_ANIMATION_PARAM, true);
+                mContext.startActivityAsUser(intent, opts.toBundle(), new UserHandle(
+                        UserHandle.USER_CURRENT));
+            }
+            return;
+        } catch (ActivityNotFoundException e) {
+            Log.e(TAG, "Failed to launch RecentAppsIntent", e);
+        }
+    }
+
+    private class PieControlsTouchListener implements View.OnTouchListener {
+        public boolean onTouch(View v, MotionEvent event) {
+
+            final boolean panelShowing = mPieControlPanel.isShowing();
+
+            if (!panelShowing) {
+                switch(event.getAction()) {
+                    case MotionEvent.ACTION_MOVE:
+                        final Resources res = mContext.getResources();
+                        WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                res.getDimensionPixelSize(R.dimen.pie_panel_height),
+                                (int)event.getX() - 150, 0,
+                                WindowManager.LayoutParams.TYPE_STATUS_BAR_PANEL,
+                                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                                        | WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+                                        | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH
+                                        | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                                PixelFormat.TRANSLUCENT);
+                        lp.gravity = Gravity.BOTTOM | Gravity.LEFT;
+                        lp.setTitle("PieControlPanel");
+                        lp.windowAnimations = android.R.style.Animation;
+                        mWindowManager.updateViewLayout(mPieControlPanel, lp);
+                        mPieControlPanel.show(true);
+
+                        event.setAction(MotionEvent.ACTION_DOWN);
+                        mPieControlPanel.onTouchEvent(event);
+                    break;
+                }
+            } else {
+                return mPieControlPanel.onTouchEvent(event);
+            }
+            return false;
+        }
+    }
+
 
     protected View.OnTouchListener mRecentsPreloadOnTouchListener = new View.OnTouchListener() {
         // additional optimization when we have software system buttons - start loading the recent
