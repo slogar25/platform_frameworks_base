@@ -112,10 +112,17 @@ public class PieControl implements PieMenu.PieController, OnClickListener {
     }
 
     protected void populateMenu() {
+
         mBack = makeItem(R.drawable.ic_sysbar_back, 1);
         mHome = makeItem(R.drawable.ic_sysbar_home, 1);
         mRecent = makeItem(R.drawable.ic_sysbar_recent, 1);
         mMenu = makeItem(R.drawable.ic_sysbar_menu, 1);
+
+        mBack = makeItem(R.drawable.ic_sysbar_back, 1, BACK_BUTTON, false);
+        mHome = makeItem(R.drawable.ic_sysbar_home, 1, HOME_BUTTON, false);
+        mRecent = makeItem(R.drawable.ic_sysbar_recent, 1, RECENT_BUTTON, false);
+        mMenu = makeItem(R.drawable.ic_sysbar_menu, 1, MENU_BUTTON, true);
+
             
         setClickListener(this, mBack, mHome, mRecent, mMenu);
 
@@ -143,7 +150,11 @@ public class PieControl implements PieMenu.PieController, OnClickListener {
         }
     }
 
+
     protected PieItem makeItem(int image, int l) {
+
+    protected PieItem makeItem(int image, int l, String name, boolean lesser) {
+
         ImageView view = new ImageView(mContext);
         view.setImageResource(image);
         view.setMinimumWidth(mItemSize);
@@ -151,11 +162,15 @@ public class PieControl implements PieMenu.PieController, OnClickListener {
         view.setScaleType(ScaleType.CENTER);
         LayoutParams lp = new LayoutParams(mItemSize, mItemSize);
         view.setLayoutParams(lp);
+
         return new PieItem(view, mContext, l);
     }
 
     protected PieItem makeFiller() {
         return new PieItem(null, null, 1);
+
+        return new PieItem(view, mContext, l, name, lesser);
+
     }
 
     public void show(boolean show) {
