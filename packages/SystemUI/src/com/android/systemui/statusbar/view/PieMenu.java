@@ -62,7 +62,13 @@ import java.util.List;
 public class PieMenu extends FrameLayout {
 
     private static final int MAX_LEVELS = 5;
+
     private static final long ANIMATION = 0;
+
+    private static final int BACKGROUND_COLOR = 0xCC;
+    private static final int ANIMATION_IN = 3000;
+    private static final int ANIMATION_OUT = 0;
+
 
     public interface PieController {
         /**
@@ -117,6 +123,8 @@ public class PieMenu extends FrameLayout {
     private Paint mNormalPaint;
     private Paint mSelectedPaint;
     private Paint mSubPaint;
+    private Paint mBatteryJuice;
+    private Paint mBatteryBackground;
 
     // touch handling
     private PieItem mCurrentItem;
@@ -195,6 +203,19 @@ public class PieMenu extends FrameLayout {
         mNormalPaint.setAntiAlias(true);
         mSelectedPaint = new Paint();
         mSelectedPaint.setAntiAlias(true);
+
+
+        mSelectedPaint.setColor(0xAA33b5e5);
+
+        mBatteryJuice = new Paint();
+        mBatteryJuice.setAntiAlias(true);
+        mBatteryJuice.setColor(0x33b5e5);
+
+        mBatteryBackground = new Paint();
+        mBatteryBackground.setAntiAlias(true);
+        mBatteryBackground.setColor(0xFFFFFF);
+        
+
         mSubPaint = new Paint();
         mSubPaint.setAntiAlias(true);
         mSubPaint.setColor(0xFF000000);
@@ -390,6 +411,7 @@ public class PieMenu extends FrameLayout {
         int inner = mRadius + rgap;
         int outer = mRadius + mRadiusInc - rgap;
         int gap = 1;
+
         for (int i = 0; i < mLevels; i++) {
             int level = i + 1;
             float sweep = (float) (Math.PI - 2 * emptyangle) / mCounts[level];
@@ -464,9 +486,14 @@ public class PieMenu extends FrameLayout {
         }
     }
 
+    int mBatteryBackgroundAlpha;
+    int mBatteryMeter;
+
     private void animateIn() {
 
         // Reset base values
+        mBatteryMeter = 0;
+        mBatteryBackgroundAlpha = 0;
         mTextAlpha = 0;
         mBackgroundOpacity = 0;
         mCharOffest = new float[25];
@@ -480,6 +507,8 @@ public class PieMenu extends FrameLayout {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
                 mBackgroundOpacity = (int)(animation.getAnimatedFraction() * BACKGROUND_COLOR);
+                mBatteryBackgroundAlpha = (int)(animation.getAnimatedFraction() * 0x55);
+                mBatteryMeter = (int)(animation.getAnimatedFraction() * 75);
                 invalidate();
             }
         });
@@ -500,8 +529,7 @@ public class PieMenu extends FrameLayout {
                         invalidate();
                     }
                 });
-                mTextAlphaAnimation.setDuration(1500);
-                mTextAlphaAnimation.setStartDelay(0);
+                mTextAlphaAnimation.setDuration(2000);
                 mTextAlphaAnimation.setInterpolator(new AccelerateInterpolator());
                 mTextAlphaAnimation.start();
             }
@@ -510,7 +538,6 @@ public class PieMenu extends FrameLayout {
             ValueAnimator mTextAnimation = ValueAnimator.ofInt(0, 1);
             mTextAnimation.addUpdateListener(new customAnimatorUpdateListener(i));
             mTextAnimation.setDuration(1000 - 800 / (i + 2));
-            mTextAnimation.setStartDelay(0);
             mTextAnimation.setInterpolator(new AccelerateInterpolator());
             mTextAnimation.start();
         }
@@ -624,6 +651,23 @@ public class PieMenu extends FrameLayout {
             
 
             //android.util.Log.d("PARANOID", "sweep="+getDegrees(last.getSweep()*1.5f));
+            state = canvas.save();
+            canvas.rotate(90 + (mCharOffest[1] / 2), mCenter.x, mCenter.y);
+            int inner = mRadius + 2;
+            int outer = mRadius + mRadiusInc - 2;
+            Path mBatteryPath = makeSlice(mPanel.getDegree() + 13, mPanel.getDegree() + 90 - 2, outer + mTouchOffset * 2, outer + mTouchOffset, mCenter);
+
+            mBatteryBackground.setAlpha(mBatteryBackgroundAlpha);
+            canvas.drawPath(mBatteryPath, mBatteryBackground);
+            canvas.restoreToCount(state);
+
+            state = canvas.save();
+            canvas.rotate(90, mCenter.x, mCenter.y);
+            Path mBatteryPath2 = makeSlice(mPanel.getDegree() + 13, mPanel.getDegree() + mBatteryMeter, outer + mTouchOffset * 2, outer + mTouchOffset, mCenter);
+            mBatteryJuice.setAlpha(mTextAlpha);
+            canvas.drawPath(mBatteryPath2, mBatteryJuice);
+            canvas.restoreToCount(state);
+
 
             // Time falling into place
             state = canvas.save();
@@ -632,12 +676,12 @@ public class PieMenu extends FrameLayout {
             float lastPos = 0;
             for( int i = 0; i < mStatusText.length(); i++ ) {
                 char character = mStatusText.charAt(i);
-                canvas.drawTextOnPath("" + character, mStatusPath, lastPos, -mCharOffest[i], mStatusPaint);
+                canvas.drawTextOnPath("" + character, mStatusPath, lastPos, -mCharOffest[i] - 40, mStatusPaint);
                 lastPos += mStatusPaint.measureText("" + character) * (character == '1' || character == ':' ? 0.5f : 0.8f);
             }
             mStatusPaint.setTextSize(50);
             lastPos -= mStatusPaint.measureText("PM");
-            canvas.drawTextOnPath("PM", mStatusPath, lastPos, -mCharOffest[mStatusText.length()-1] - 120, mStatusPaint);
+            canvas.drawTextOnPath("PM", mStatusPath, lastPos, -mCharOffest[mStatusText.length()-1] - 160, mStatusPaint);
             canvas.restoreToCount(state);
 
             // Date circling in
@@ -645,10 +689,10 @@ public class PieMenu extends FrameLayout {
             pos = mPanel.getDegree() + 180;
             canvas.rotate(pos, mCenter.x, mCenter.y);
             mStatusPaint.setTextSize(20);
-            canvas.drawTextOnPath("BASE.DE", mStatusPath, mCharOffest[0], -75, mStatusPaint);
-            canvas.drawTextOnPath("WED, 16 JAN 2013", mStatusPath, mCharOffest[0], -50, mStatusPaint);
-            canvas.drawTextOnPath("BATTERY AT 50%", mStatusPath, mCharOffest[0], -25, mStatusPaint);
-            canvas.drawTextOnPath("WIFI: SITECOM788A2A", mStatusPath, mCharOffest[0], 0, mStatusPaint);
+            canvas.drawTextOnPath("BASE.DE", mStatusPath, mCharOffest[4], -75, mStatusPaint);
+            canvas.drawTextOnPath("WED, 16 JAN 2013", mStatusPath, mCharOffest[4], -50, mStatusPaint);
+            canvas.drawTextOnPath("BATTERY AT 75%", mStatusPath, mCharOffest[4], -25, mStatusPaint);
+            canvas.drawTextOnPath("WIFI: SITECOM788A2A", mStatusPath, mCharOffest[4], 0, mStatusPaint);
             canvas.restoreToCount(state);
 
             // floating text
