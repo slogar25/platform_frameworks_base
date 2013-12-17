@@ -207,6 +207,7 @@
     <dimen name="peek_height">84dp</dimen>
 
 
+
     <!-- Quick Settings tile geometry: top interior margin, above icon -->
     <dimen name="qs_tile_margin_above_icon">27dp</dimen>
     <!-- Quick Settings tile geometry: gap between icon and text -->
@@ -220,6 +221,9 @@
     <dimen name="notification_panel_width">-1dp</dimen>
 
     <!-- Height of the quick navigation bar trigger -->
+
+    <!-- Height of the pie controls bar trigger -->
+
     <dimen name="pie_trigger_height">10dp</dimen>
 
     <!-- Height of the pie controls bar-->
