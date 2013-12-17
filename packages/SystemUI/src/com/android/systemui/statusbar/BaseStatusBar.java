@@ -226,6 +226,7 @@ public abstract class BaseStatusBar extends SystemUI implements
         }
     };
 
+
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -252,8 +253,16 @@ public abstract class BaseStatusBar extends SystemUI implements
                 Settings.Global.getUriFor(Settings.Global.DEVICE_PROVISIONED), true,
                 mProvisioningObserver);
 
-        mBarService = IStatusBarService.Stub.asInterface(
-                ServiceManager.getService(Context.STATUS_BAR_SERVICE));
+    private class PieControlsTouchListener implements View.OnTouchListener {
+        private final PieControlPanel mControlPanel;
+        private float initialX = 0;
+        private float initialY = 0;
+
+
+        public PieControlsTouchListener(PieControlPanel panel) {
+            mControlPanel = panel;
+        }
+
 
 
         mRecents = getComponent(RecentsComponent.class);
@@ -263,13 +272,49 @@ public abstract class BaseStatusBar extends SystemUI implements
 
         mStatusBarContainer = new FrameLayout(mContext);
 
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            final int action = event.getAction();
+            if (!mControlPanel.isShowing()) {
+                switch(action) {
+                    case MotionEvent.ACTION_DOWN:
+                        initialX = event.getX();
+                        initialY = event.getY();
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        float deltaX = event.getX() - initialX;
+                        float deltaY = event.getY() - initialY;
+                        // Swipe up
+                        //if(deltaY < -10) {
+                            mControlPanel.show(true);
+                            event.setAction(MotionEvent.ACTION_DOWN);
+                            mControlPanel.onTouchEvent(event);
+                        //}
+                }
+            } else {
+                return mControlPanel.onTouchEvent(event);
+            }
+            return false;
+        }
+    }
+
+
+    private void addPie(int gravity) {
         // Quick navigation bar trigger area
         final Resources res = mContext.getResources();
         mPieControlsTrigger = new View(mContext);
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+
                 ViewGroup.LayoutParams.MATCH_PARENT, 
                 res.getDimensionPixelSize(R.dimen.pie_trigger_height),
                 WindowManager.LayoutParams.TYPE_STATUS_BAR_PANEL,
+
+                (gravity == Gravity.TOP || gravity == Gravity.BOTTOM ?
+                        ViewGroup.LayoutParams.MATCH_PARENT : res.getDimensionPixelSize(R.dimen.pie_trigger_height)),
+                (gravity == Gravity.LEFT || gravity == Gravity.RIGHT ?
+                        ViewGroup.LayoutParams.MATCH_PARENT : res.getDimensionPixelSize(R.dimen.pie_trigger_height)),
+                WindowManager.LayoutParams.TYPE_INPUT_METHOD_DIALOG,
+
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                         | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
@@ -277,31 +322,53 @@ public abstract class BaseStatusBar extends SystemUI implements
                         | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH,
                 PixelFormat.TRANSLUCENT);
 
-        lp.gravity = Gravity.BOTTOM;
-
-        mPieControlsTrigger.setOnTouchListener(new PieControlsTouchListener());
-        mWindowManager.addView(mPieControlsTrigger, lp);
+        lp.gravity = gravity;
 
         // Quick navigation bar panel
-        mPieControlPanel = (PieControlPanel) View.inflate(mContext,
+        PieControlPanel panel = (PieControlPanel) View.inflate(mContext,
                 R.layout.pie_control_panel, null);
+
+        mPieControlsTrigger.setOnTouchListener(new PieControlsTouchListener(panel));
+        mWindowManager.addView(mPieControlsTrigger, lp);
+
         lp = new WindowManager.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_STATUS_BAR_PANEL,
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                         | WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
                         | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH
                         | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                 PixelFormat.TRANSLUCENT);
-        lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
         lp.setTitle("PieControlPanel");
         lp.windowAnimations = android.R.style.Animation;
 
-        mPieControlPanel.setBar(this);
-        mPieControlPanel.setHandler(mHandler);
+        panel.setBar(this);
+        panel.setHandler(mHandler);
+        panel.setOrientation(gravity);
+        mWindowManager.addView(panel, lp);
+    }
 
-        mWindowManager.addView(mPieControlPanel, lp);
+    public void start() {
+        mWindowManager = (WindowManager)mContext.getSystemService(Context.WINDOW_SERVICE);
+        mWindowManagerService = WindowManagerGlobal.getWindowManagerService();
+        mDisplay = mWindowManager.getDefaultDisplay();
+
+        mProvisioningObserver.onChange(false); // set up
+        mContext.getContentResolver().registerContentObserver(
+                Settings.Global.getUriFor(Settings.Global.DEVICE_PROVISIONED), true,
+                mProvisioningObserver);
+
+        mBarService = IStatusBarService.Stub.asInterface(
+                ServiceManager.getService(Context.STATUS_BAR_SERVICE));
+
+        mStatusBarContainer = new FrameLayout(mContext);
+
+        // Add pie
+        addPie(Gravity.TOP);
+        addPie(Gravity.LEFT);
+        addPie(Gravity.BOTTOM);
+        addPie(Gravity.RIGHT);
 
 
         // Connect in to the status bar manager service
@@ -845,6 +912,7 @@ public abstract class BaseStatusBar extends SystemUI implements
         }
     }
 
+
     private class PieControlsTouchListener implements View.OnTouchListener {
         public boolean onTouch(View v, MotionEvent event) {
 
@@ -880,6 +948,8 @@ public abstract class BaseStatusBar extends SystemUI implements
             return false;
         }
     }
+
+
 
 
     protected View.OnTouchListener mRecentsPreloadOnTouchListener = new View.OnTouchListener() {

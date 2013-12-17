@@ -18,6 +18,11 @@ package com.android.systemui.statusbar;
 
 
 import android.content.Context;
+
+
+import android.graphics.Point;
+import android.graphics.PointF;
+
 import android.graphics.Rect;
 import android.hardware.input.InputManager;
 import android.os.Handler;
@@ -25,6 +30,13 @@ import android.os.Message;
 import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.util.Slog;
+
+
+import android.view.Display;
+import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
+
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.KeyEvent;
@@ -43,6 +55,10 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
     private int mInjectKeycode;
     private long mDownTime;
     private Context mContext;
+    private int mOrientation;
+    private int mWidth;
+    private int mHeight;
+
     
     ViewGroup mContentFrame;
     Rect mContentArea = new Rect();
@@ -59,6 +75,25 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
         mPieControl = new PieControl(context);
         mPieControl.setOnNavButtonPressedListener(this);
         mPieControl.setPanel(this);
+        mOrientation = Gravity.BOTTOM;
+    }
+
+    public void setOrientation(int orientation) {
+        mOrientation = orientation;
+    }
+
+    public int getOrientation() {
+        return mOrientation;
+    }
+
+    public int getDegree() {
+        switch( mOrientation ) {
+            case Gravity.LEFT: return 180;
+            case Gravity.TOP: return -90;
+            case Gravity.RIGHT: return 0;
+            case Gravity.BOTTOM: return 90;
+        }
+        return 0;
     }
 
     public void setBar(BaseStatusBar statusbar) {
@@ -87,7 +122,6 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
     @Override
     public void onFinishInflate() {
         super.onFinishInflate();
-
         mContentFrame = (ViewGroup)findViewById(R.id.content_frame);
         setWillNotDraw(false);
         mPieControl.attachToContainer(this);
@@ -99,11 +133,40 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
         return mShowing;
     }
 
+    public PointF getSize() {
+        return new PointF(mWidth, mHeight);
+    }
+
     public void show(boolean show) {
         mShowing = show;
         setVisibility(show ? View.VISIBLE : View.GONE);
+
         if (show) {
             mPieControl.setCenter(this.getWidth() / 2, this.getHeight());
+
+
+        if (show) {
+            Point outSize = new Point(0,0);
+            WindowManager windowManager = (WindowManager)mContext.getSystemService(Context.WINDOW_SERVICE);
+            windowManager.getDefaultDisplay().getRealSize(outSize);
+            mWidth = outSize.x;
+            mHeight = outSize.y;
+
+            switch( mOrientation ) {
+                case Gravity.LEFT:
+                    mPieControl.setCenter(0, mHeight / 2);
+                    break;
+                case Gravity.TOP:
+                    mPieControl.setCenter(mWidth / 2, 0);
+                    break;
+                case Gravity.RIGHT:
+                    mPieControl.setCenter(mWidth, mHeight / 2);
+                    break;
+                case Gravity.BOTTOM: 
+                    mPieControl.setCenter(mWidth / 2, mHeight);
+                    break;
+            }
+
         }
         mPieControl.show(show);
     }

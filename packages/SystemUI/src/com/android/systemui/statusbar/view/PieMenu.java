@@ -37,6 +37,12 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.util.AttributeSet;
 import android.util.ColorUtils;
+
+
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.view.Gravity;
+
 import android.view.MotionEvent;
 import android.view.SoundEffectConstants;
 import android.view.View;
@@ -338,11 +344,25 @@ public class PieMenu extends FrameLayout {
                         int h = view.getMeasuredHeight();
                         int r = inner + (outer - inner) * 2 / 3;
                         int x = (int) (r * Math.sin(angle));
-                        int y = mCenter.y - (int) (r * Math.cos(angle)) - h / 2;
-                        if (onTheTop()) {
-                            x = mCenter.x + x - w / 2;
-                        } else {
-                            x = mCenter.x - x - w / 2;
+                        int y = (int) (r * Math.cos(angle));
+
+                        switch( mPanel.getOrientation() ) {
+                            case Gravity.LEFT:
+                                y = mCenter.y - (int) (r * Math.sin(angle)) - h / 2;
+                                x = (int) (r * Math.cos(angle)) - w / 2;
+                                break;
+                            case Gravity.RIGHT:
+                                y = mCenter.y - (int) (Math.PI/2-r * Math.sin(angle)) - h / 2;
+                                x = mCenter.x - (int) (r * Math.cos(angle)) - w / 2;
+                                break;
+                            case Gravity.TOP:
+                                y = y - h / 2;
+                                x = mCenter.x - (int)(Math.PI/2-x) - w / 2;
+                                break;
+                            case Gravity.BOTTOM: 
+                                y = mCenter.y - y - h / 2;
+                                x = mCenter.x - x - w / 2;
+                                break;
                         }
                         view.layout(x, y, x + w, y + h);
                     }
@@ -391,16 +411,44 @@ public class PieMenu extends FrameLayout {
                 last = mOpenItem;
             }
             for (PieItem item : mItems) {
-                if (item != last) {
-                    drawItem(canvas, item);
-                }
+                drawItem(canvas, item);
             }
-            if (last != null) {
+
+            /*if (last != null) {
                 drawItem(canvas, last);
             }
             if (mPieView != null) {
                 mPieView.draw(canvas);
+
             }
+
+            }*/
+
+            //STATUS BAR FLOATING TEXT
+            /*
+            float width = (float)getWidth();
+			float height = (float)getHeight();
+			float radius;
+
+			Path path = new Path();
+			path.addCircle(mCenter.x, mCenter.y, mRadius, Path.Direction.CW);
+			Paint paint = new Paint();
+			paint.setColor(Color.WHITE);
+			paint.setStrokeWidth(5);
+            paint.setStyle(Paint.Style.FILL);
+			paint.setTextSize(80);
+
+            String text = "00:03 MON";
+            float w = paint.measureText(text, 0, text.length());
+            canvas.drawTextOnPath(text, path, mTextOffset, -40, paint);
+
+            paint.setColor(Color.RED);
+            canvas.drawTextOnPath(text, path, -w, -40, paint);
+
+            paint.setColor(Color.GREEN);
+            canvas.drawTextOnPath(text, path, w, -40, paint);*/
+            
+
         }
     }
 
@@ -411,6 +459,7 @@ public class PieMenu extends FrameLayout {
                 p = item.isSelected() ? mSelectedPaint : mSubPaint;
             }
             int state = canvas.save();
+
             if (onTheTop()) {
                 canvas.scale(-1, 1);
             }
@@ -420,8 +469,20 @@ public class PieMenu extends FrameLayout {
             canvas.restoreToCount(state);
             // draw the item view
             View view = item.getView();
+
+            canvas.rotate(getDegrees(item.getStartAngle()) + mPanel.getDegree(), mCenter.x, mCenter.y);
+            canvas.drawPath(mPath, item.isSelected() ? mSelectedPaint : mNormalPaint);
+            canvas.restoreToCount(state);
+
+
             state = canvas.save();
+            ImageView view = (ImageView)item.getView();
             canvas.translate(view.getX(), view.getY());
+
+
+            canvas.rotate(getDegrees(item.getStartAngle() + item.getSweep() / 2) + mPanel.getDegree(), view.getWidth() / 2, view.getHeight() / 2);
+
+
             view.draw(canvas);
             canvas.restoreToCount(state);
         }
@@ -462,7 +523,15 @@ public class PieMenu extends FrameLayout {
                 if (!mAnimating) {
                     deselect();
                 }
+
                 if (!handled && (item != null) && (item.getView() != null)) {
+
+
+                int orient = mPanel.getOrientation();
+                int distance = (int)Math.abs(orient == Gravity.TOP || orient == Gravity.BOTTOM ? y : x);
+                if (!handled && (item != null) && (item.getView() != null) && (distance > mTouchOffset && distance
+                        < (int)(mRadius + mRadiusInc) * 2.5f) ) {
+
                     if ((item == mOpenItem) || !mAnimating) {
                         item.getView().performClick();
                     }
@@ -473,7 +542,6 @@ public class PieMenu extends FrameLayout {
         } else if (MotionEvent.ACTION_MOVE == action) {
             if (mAnimating) return false;
             boolean handled = false;
-            PointF polar = getPolar(x, y);
             if (mPieView != null) {
                 handled = mPieView.onTouchEvent(evt);
             }
@@ -481,7 +549,7 @@ public class PieMenu extends FrameLayout {
                 invalidate();
                 return false;
             }
-            PieItem item = findItem(polar);
+            PieItem item = findItem(getPolar(x, y));
             if (item == null) {
             } else if (mCurrentItem != item) {
                 onEnter(item);
@@ -528,6 +596,7 @@ public class PieMenu extends FrameLayout {
         mPieView = null;
     }
 
+
     private PointF getPolar(float x, float y) {
         PointF res = new PointF();
         // get angle and radius from x/y
@@ -544,6 +613,26 @@ public class PieMenu extends FrameLayout {
             res.x = (float) (Math.PI - Math.asin(x / res.y ));
         }
         return res;
+
+    private float getPolar(double x, double y) {
+        PointF size = mPanel.getSize();
+        int orient = mPanel.getOrientation();
+        switch( orient ) {
+            case Gravity.TOP:
+            case Gravity.BOTTOM:
+                x = (size.x / 2 - x) * (orient == Gravity.TOP ? -1 : 1);
+                y = orient == Gravity.BOTTOM ? mCenter.y - y : size.y + y;
+                break;
+
+            case Gravity.LEFT:
+            case Gravity.RIGHT:
+                x = (size.y + x) * (orient == Gravity.RIGHT ? -1 : 1);
+                y = (size.y / 2 - y) * (orient == Gravity.RIGHT ? -1 : 1);
+                break;
+        }
+        return -(((float)(Math.acos((orient == Gravity.TOP || orient == Gravity.BOTTOM ? x : y ) /
+                Math.sqrt(x * x + y * y)) * 180 / Math.PI) - 90) / 10);
+
     }
 
     /**
@@ -551,7 +640,7 @@ public class PieMenu extends FrameLayout {
      * @param polar x: angle, y: dist
      * @return the item at angle/dist or null
      */
-    private PieItem findItem(PointF polar) {
+    private PieItem findItem(float polar) {
         if (mItems != null) {
             int c = 0;
             for (PieItem item : mItems) {
@@ -563,10 +652,15 @@ public class PieMenu extends FrameLayout {
         return null;
     }
 
+
     private boolean inside(PointF polar, float offset, PieItem item) {
         float sweep = polar.x < 0 ? -(item.getSweep()/2) : item.getSweep()/2;
         return (item.getStartAngle() < polar.x + sweep)
         && (item.getStartAngle() + item.getSweep() > polar.x + sweep);
-    }
 
+    private boolean inside(float polar, float offset, PieItem item) {
+        return (item.getStartAngle() < polar)
+        && (item.getStartAngle() + item.getSweep() > polar);
+
+    }
 }
