@@ -173,11 +173,14 @@ public abstract class BaseStatusBar extends SystemUI implements
     private boolean mDeviceProvisioned = false;
 
 
+
     private RecentsComponent mRecents;
 
     public WindowManager getWindowManager() {
         return mWindowManager;
     }
+
+
 
     public NotificationRowLayout getNotificationRowLayout() {
         return mPile;
