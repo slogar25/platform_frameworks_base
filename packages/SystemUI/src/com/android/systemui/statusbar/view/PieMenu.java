@@ -39,7 +39,11 @@ import android.util.AttributeSet;
 import android.util.ColorUtils;
 
 
+
 import android.view.animation.AccelerateDecelerateInterpolator;
+
+import android.view.animation.AccelerateInterpolator;
+
 import android.view.animation.DecelerateInterpolator;
 import android.view.Gravity;
 
@@ -199,8 +203,65 @@ public class PieMenu extends FrameLayout {
         mLastGlowColor = ColorUtils.getColorSettingInfo(mContext,
                 Settings.System.NAV_GLOW_COLOR);
 
+
         ColorObserver observer = new ColorObserver(new Handler());
         observer.observe();
+
+        mUseBackground = true;
+        mBackgroundOpacity = 0;
+        mGlowColorHelper = false;
+
+        // Circle status text
+        mCharOffest = new float[25];
+        for (int i = 0; i < mCharOffest.length; i++) {
+            mCharOffest[i] = 1000;
+        }
+
+        mTextOffset = 0;
+        mTextAlpha = 0;
+        mTextLen = 0;
+        mStatusPaint = new Paint();
+        mStatusPaint.setColor(Color.WHITE);
+        mStatusPaint.setStyle(Paint.Style.FILL);
+        mStatusPaint.setTextSize(150);
+        
+        mStatusAnimate  = false;
+        mStatusClock = new Clock(mContext);
+        mStatusClock.startBroadcastReceiver();
+        mStatusText = mStatusClock.getSmallTime().toString();
+        mTextLen = mStatusPaint.measureText(mStatusText, 0, mStatusText.length());
+        mStatusClock.setOnClockChangedListener(new Clock.OnClockChangedListener() {
+            public void onChange(CharSequence t) {
+                mStatusText = t.toString();
+                mTextLen = mStatusPaint.measureText(mStatusText, 0, mStatusText.length());
+            }
+        });
+
+        mLastBackgroundColor = new ColorUtils.ColorSettingInfo();
+        mLastGlowColor = new ColorUtils.ColorSettingInfo();
+
+        // Only watch for per app color changes when the setting is in check
+        if (ColorUtils.getPerAppColorState(mContext)) {
+            setBackgroundColor();
+            setGlowColor();
+
+            // Listen for nav bar color changes
+            mContext.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.NAV_BAR_COLOR), false, new ContentObserver(new Handler()) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        setBackgroundColor();
+                    }});
+
+            // Listen for button glow color changes
+            mContext.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.NAV_GLOW_COLOR), false, new ContentObserver(new Handler()) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        setGlowColor();
+                    }});
+        }
+
     }
 
     public void setPanel(PieControlPanel panel) {
@@ -388,6 +449,104 @@ public class PieMenu extends FrameLayout {
         return (float) (270 - 180 * angle / Math.PI);
     }
 
+
+
+    class customAnimatorUpdateListener implements ValueAnimator.AnimatorUpdateListener {
+        private int mIndex = 0;
+        public customAnimatorUpdateListener(int index) {
+            mIndex = index;
+        }
+
+        @Override
+        public void onAnimationUpdate(ValueAnimator animation) {
+            mCharOffest[mIndex] = (float)((1 - animation.getAnimatedFraction()) * 1000);
+            invalidate();
+        }
+    }
+
+    private void animateIn() {
+
+        // Reset base values
+        mTextAlpha = 0;
+        mBackgroundOpacity = 0;
+        mCharOffest = new float[25];
+        for (int i = 0; i < mCharOffest.length; i++) {
+            mCharOffest[i] = 1000;
+        }
+
+        // Background
+        mIntoAnimation = ValueAnimator.ofInt(0, 1);
+        mIntoAnimation.addUpdateListener(new AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                mBackgroundOpacity = (int)(animation.getAnimatedFraction() * BACKGROUND_COLOR);
+                invalidate();
+            }
+        });
+        mIntoAnimation.setDuration(ANIMATION_IN);
+        mIntoAnimation.setInterpolator(new DecelerateInterpolator());
+        mIntoAnimation.start();
+
+        int textLen = mStatusText.length();
+        for( int i = 0; i < textLen; i++ ) {
+
+            // Text alpha
+            if ( i == 0 ) {
+                ValueAnimator mTextAlphaAnimation  = ValueAnimator.ofInt(0, 1);
+                mTextAlphaAnimation.addUpdateListener(new AnimatorUpdateListener() {
+                    @Override
+                    public void onAnimationUpdate(ValueAnimator animation) {
+                        mTextAlpha = (int)(animation.getAnimatedFraction() * 255);
+                        invalidate();
+                    }
+                });
+                mTextAlphaAnimation.setDuration(1500);
+                mTextAlphaAnimation.setStartDelay(0);
+                mTextAlphaAnimation.setInterpolator(new AccelerateInterpolator());
+                mTextAlphaAnimation.start();
+            }
+
+            // Chracters falling into place
+            ValueAnimator mTextAnimation = ValueAnimator.ofInt(0, 1);
+            mTextAnimation.addUpdateListener(new customAnimatorUpdateListener(i));
+            mTextAnimation.setDuration(1000 - 800 / (i + 2));
+            mTextAnimation.setStartDelay(0);
+            mTextAnimation.setInterpolator(new AccelerateInterpolator());
+            mTextAnimation.start();
+        }
+    }
+
+    public void animateOut() {
+        mStatusAnimate = false;
+        if (mIntoAnimation != null && mIntoAnimation.isRunning()) {
+            mIntoAnimation.cancel();
+        }
+
+        final int currentAlpha = mTextAlpha;
+        final float currentOffset = mTextOffset;
+        final int currentOpacity = mBackgroundOpacity;
+        mOutroAnimation = ValueAnimator.ofInt(1, 0);
+        mOutroAnimation.addUpdateListener(new AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                mBackgroundOpacity = (int)((1 - animation.getAnimatedFraction()) * currentOpacity);
+                mTextAlpha =  (int)((1 - animation.getAnimatedFraction()) * currentAlpha);
+                invalidate();
+            }
+        });
+        mOutroAnimation.setDuration(ANIMATION_OUT);
+        mOutroAnimation.setInterpolator(new DecelerateInterpolator());
+        mOutroAnimation.addListener(new AnimatorListenerAdapter() {
+            public void onAnimationEnd(Animator a) {
+                mPanel.show(false);
+            }});
+
+        mOutroAnimation.start();
+    }
+
+    float mCharOffest[];
+
+
     @Override
     protected void onDraw(Canvas canvas) {
         if (mOpen) {
@@ -413,6 +572,7 @@ public class PieMenu extends FrameLayout {
             for (PieItem item : mItems) {
                 drawItem(canvas, item);
             }
+
 
             /*if (last != null) {
                 drawItem(canvas, last);
@@ -448,6 +608,61 @@ public class PieMenu extends FrameLayout {
             paint.setColor(Color.GREEN);
             canvas.drawTextOnPath(text, path, w, -40, paint);*/
             
+
+
+
+            mStatusPath = new Path();
+            mStatusPath.addCircle(mCenter.x, mCenter.y, mRadius+mRadiusInc+mTouchOffset, Path.Direction.CW);
+
+            mStatusPaint = new Paint();
+            mStatusPaint.setColor(Color.WHITE);
+            mStatusPaint.setStyle(Paint.Style.FILL);
+            mStatusPaint.setTextSize(150);
+            mStatusPaint.setAlpha(mTextAlpha);
+            mStatusPaint.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
+            mStatusPaint.setTextScaleX(1.2f);
+            
+
+            //android.util.Log.d("PARANOID", "sweep="+getDegrees(last.getSweep()*1.5f));
+
+            // Time falling into place
+            state = canvas.save();
+            float pos = mPanel.getDegree() + 120;
+            canvas.rotate(pos, mCenter.x, mCenter.y);
+            float lastPos = 0;
+            for( int i = 0; i < mStatusText.length(); i++ ) {
+                char character = mStatusText.charAt(i);
+                canvas.drawTextOnPath("" + character, mStatusPath, lastPos, -mCharOffest[i], mStatusPaint);
+                lastPos += mStatusPaint.measureText("" + character) * (character == '1' || character == ':' ? 0.5f : 0.8f);
+            }
+            mStatusPaint.setTextSize(50);
+            lastPos -= mStatusPaint.measureText("PM");
+            canvas.drawTextOnPath("PM", mStatusPath, lastPos, -mCharOffest[mStatusText.length()-1] - 120, mStatusPaint);
+            canvas.restoreToCount(state);
+
+            // Date circling in
+            state = canvas.save();
+            pos = mPanel.getDegree() + 180;
+            canvas.rotate(pos, mCenter.x, mCenter.y);
+            mStatusPaint.setTextSize(20);
+            canvas.drawTextOnPath("BASE.DE", mStatusPath, mCharOffest[0], -75, mStatusPaint);
+            canvas.drawTextOnPath("WED, 16 JAN 2013", mStatusPath, mCharOffest[0], -50, mStatusPaint);
+            canvas.drawTextOnPath("BATTERY AT 50%", mStatusPath, mCharOffest[0], -25, mStatusPaint);
+            canvas.drawTextOnPath("WIFI: SITECOM788A2A", mStatusPath, mCharOffest[0], 0, mStatusPaint);
+            canvas.restoreToCount(state);
+
+            // floating text
+            /*
+            state = canvas.save();
+            canvas.rotate(mPanel.getDegree(), mCenter.x, mCenter.y);
+            mStatusPaint.setAlpha(mTextAlpha);
+            canvas.drawTextOnPath(mStatusText, mStatusPath, 0, 0, mStatusPaint);
+            canvas.restoreToCount(state);
+
+            if (mStatusAnimate) {
+                mTextOffset += .4f;
+                invalidate();
+            }*/
 
         }
     }
