@@ -95,13 +95,17 @@ import java.util.List;
 
 public class PieMenu extends FrameLayout {
 
+
     private static final int MAX_LEVELS = 5;
 
     private static final long ANIMATION = 0;
 
+
+
     private static final int BACKGROUND_COLOR = 0xCC;
     private static final int ANIMATION_IN = 3000;
     private static final int ANIMATION_OUT = 0;
+
 
 
     public interface PieController {
@@ -111,45 +115,44 @@ public class PieMenu extends FrameLayout {
          */
         public boolean onOpen();
 
-    }
+    private static final int COLOR_DEFAULT_BACKGROUND = 0xAAFF005E;
+    private static final int COLOR_DEFAULT_SELECT = 0xAADBFF00;
+    private static final int COLOR_DEFAULT_BUTTONS = 0xB2FFFFFF;
+    private static final int COLOR_DEFAULT_STATUS = 0xFFFFFFFF;
+    private static final int COLOR_DEFAULT_BATTERY_JUICE = 0x33b5e5;
+    private static final int COLOR_DEFAULT_BATTERY_JUICE_LOW = 0xffbb33;
+    private static final int COLOR_DEFAULT_BATTERY_JUICE_CRITICAL = 0xff4444;
+    private static final int COLOR_DEFAULT_BATTERY_BACKGROUND = 0xFFFFFF;
 
-    /**
-     * A view like object that lives off of the pie menu
-     */
+
+    // A view like object that lives off of the pie menu
     public interface PieView {
-
         public interface OnLayoutListener {
             public void onLayout(int ax, int ay, boolean left);
         }
-
         public void setLayoutListener(OnLayoutListener l);
-
         public void layout(int anchorX, int anchorY, boolean onleft, float angle,
                 int parentHeight);
-
         public void draw(Canvas c);
-
         public boolean onTouchEvent(MotionEvent evt);
-
     }
 
+    // System
     private WindowManager mWindowManager;
     private Context mContext;
     private PiePolicy mPolicy;
+    private Vibrator mVibrator;
 
-    private Point mCenter;
+    // Geometry
+    private Point mCenter = new Point(0, 0);
     private int mRadius;
     private int mRadiusInc;
     private int mSlop;
     private int mTouchOffset;
 
-    private boolean mOpen;
-    private PieController mController;
-
     private List<PieItem> mItems;
-    private int mLevels;
-    private int[] mCounts;
     private PieView mPieView;
+
 
     // sub menus
     private PieItem mOpenItem;
@@ -162,16 +165,16 @@ public class PieMenu extends FrameLayout {
     private Paint mBatteryBackground;
     private Paint mGlowPaint;
 
+
+
     // touch handling
     private PieItem mCurrentItem;
-
-    private boolean mUseBackground;
-    private boolean mAnimating;
-
     private PieControlPanel mPanel;
 
+    // Colors
     private ColorUtils.ColorSettingInfo mLastBackgroundColor;
     private ColorUtils.ColorSettingInfo mLastGlowColor;
+
 
 
     private boolean mGlowColorHelper;
@@ -183,43 +186,70 @@ public class PieMenu extends FrameLayout {
     private float mTextLen;
     private Path mStatusPath;
     private String mStatusText;
-    private Paint mStatusPaint;
-    private boolean mStatusAnimate;
 
+    private Paint mNormalPaint;
+    private Paint mSelectedPaint;
+    private Paint mBatteryJuice;
+    private Paint mBatteryBackground;
+
+    private Paint mStatusPaint;
+
+    // Animations
     private ValueAnimator mIntoAnimation;
     private ValueAnimator mOutroAnimation;
 
+
     private Vibrator mVibrator;
 
+
+
+    private int mBackgroundOpacity = 0;
+    private float mTextOffset = 0;
+    private int mTextAlpha = 0;
+    private float mCharOffset[];
+    private int mGlowOffset = 0;
+    int mBatteryBackgroundAlpha = 0;
+    int mBatteryJuiceAlpha = 0;
+    int mBatteryMeter = 0;
+
+    // Flags
+    private boolean mPanelActive = false;
+    private boolean mPanelParentChanged = false;
+    private boolean mPerAppColor = false;
+    private boolean mOpen = false;
+    private boolean mStatusAnimate = false;;
+    private boolean mGlowColorHelper = false;
+    private int mStatusMode = 2;
+
+    // Layout and UI
 
     private ViewManager mPanelParent;
     private ScrollView mScrollView;
     private View mContainer;
     private View mContentFrame;
-    private boolean mPanelParentChanged;
+
 
     /**
      * @param context
      * @param attrs
      * @param defStyle
      */
+
+    private Path mStatusPath;
+    private float mTextLen = 0;
+    private String mStatusText;
+
+
     public PieMenu(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         init(context);
     }
 
-    /**
-     * @param context
-     * @param attrs
-     */
     public PieMenu(Context context, AttributeSet attrs) {
         super(context, attrs);
         init(context);
     }
 
-    /**
-     * @param context
-     */
     public PieMenu(Context context) {
         super(context);
         init(context);
@@ -255,16 +285,14 @@ public class PieMenu extends FrameLayout {
 
 
         mItems = new ArrayList<PieItem>();
-        mLevels = 0;
-        mCounts = new int[MAX_LEVELS];
         Resources res = ctx.getResources();
         mRadius = (int) res.getDimension(R.dimen.pie_radius_start);
         mRadiusInc = (int) res.getDimension(R.dimen.pie_radius_increment);
         mSlop = (int) res.getDimension(R.dimen.pie_slop);
         mTouchOffset = (int) res.getDimension(R.dimen.pie_touch_offset);
-        mOpen = false;
         setWillNotDraw(false);
         setDrawingCacheEnabled(false);
+
         mCenter = new Point(0, 0);
         mBackground = new ColorDrawable(0x00000000);
         mNormalPaint = new Paint();
@@ -278,12 +306,23 @@ public class PieMenu extends FrameLayout {
         mGlowPaint = new Paint(0xAA33b5e5);
         mGlowPaint.setColorFilter(new LightingColorFilter(0xAA33b5e5, 1));
 
+
+        mNormalPaint = new Paint();
+        mNormalPaint.setAntiAlias(true);
+        mNormalPaint.setColor(COLOR_DEFAULT_BACKGROUND);
+
+        mSelectedPaint = new Paint();
+        mSelectedPaint.setAntiAlias(true);
+        mSelectedPaint.setColor(COLOR_DEFAULT_SELECT);
+
+
         mBatteryJuice = new Paint();
         mBatteryJuice.setAntiAlias(true);
-        mBatteryJuice.setColor(0x33b5e5);
+        mBatteryJuice.setColor(COLOR_DEFAULT_BATTERY_JUICE);
 
         mBatteryBackground = new Paint();
         mBatteryBackground.setAntiAlias(true);
+
         mBatteryBackground.setColor(0xFFFFFF);
         
 
@@ -299,9 +338,15 @@ public class PieMenu extends FrameLayout {
         ColorObserver observer = new ColorObserver(new Handler());
         observer.observe();
 
-        mUseBackground = true;
-        mBackgroundOpacity = 0;
-        mGlowColorHelper = false;
+        mBatteryBackground.setColor(COLOR_DEFAULT_BATTERY_BACKGROUND);
+
+        mStatusPaint = new Paint();
+        mStatusPaint.setColor(COLOR_DEFAULT_STATUS);
+        mStatusPaint.setStyle(Paint.Style.FILL);
+        mStatusPaint.setTextSize(150);
+        mStatusPaint.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
+
+
 
         // Circle status text
         mCharOffset = new float[25];
@@ -309,15 +354,6 @@ public class PieMenu extends FrameLayout {
             mCharOffset[i] = 1000;
         }
 
-        mTextOffset = 0;
-        mTextAlpha = 0;
-        mTextLen = 0;
-        mStatusPaint = new Paint();
-        mStatusPaint.setColor(Color.WHITE);
-        mStatusPaint.setStyle(Paint.Style.FILL);
-        mStatusPaint.setTextSize(150);
-        
-        mStatusAnimate  = false;
         mStatusText = mPolicy.getSimpleTime();
         mTextLen = mStatusPaint.measureText(mStatusText, 0, mStatusText.length());
         mPolicy.setOnClockChangedListener(new PiePolicy.OnClockChangedListener() {
@@ -366,20 +402,9 @@ public class PieMenu extends FrameLayout {
         mPanelParentChanged = false;
     }
 
-    public void setController(PieController ctl) {
-        mController = ctl;
-    }
-
-    public void setUseBackground(boolean useBackground) {
-        mUseBackground = useBackground;
-    }
-
     public void addItem(PieItem item) {
         // add the item to the pie itself
         mItems.add(item);
-        int l = item.getLevel();
-        mLevels = Math.max(mLevels, l);
-        mCounts[l]++;
     }
 
     public void removeItem(PieItem item) {
@@ -394,23 +419,27 @@ public class PieMenu extends FrameLayout {
         return mCenter.y < mSlop;
     }
 
-    /**
-     * guaranteed has center set
-     * @param show
-     */
     public void show(boolean show) {
         mOpen = show;
         if (mOpen) {
             // ensure clean state
-            mAnimating = false;
+            mStatusMode = Settings.System.getInt(mContext.getContentResolver(), Settings.System.PIE_MODE, 2);
+            mPerAppColor = Settings.System.getInt(mContext.getContentResolver(), Settings.System.PIE_PAC, 0) == 1;
+
+            if (!mPerAppColor) {
+                mNormalPaint.setColor(COLOR_DEFAULT_BACKGROUND);
+                mSelectedPaint.setColor(COLOR_DEFAULT_SELECT);
+                mStatusPaint.setColor(COLOR_DEFAULT_STATUS);
+
+                // To-do: tint battery perhaps?
+                //mBatteryJuice.setColor(COLOR_DEFAULT_BATTERY_JUICE);
+                //mBatteryBackground.setColor(COLOR_DEFAULT_BATTERY_BACKGROUND);
+            }
+
             mCurrentItem = null;
-            mOpenItem = null;
             mPieView = null;
             for (PieItem item : mItems) {
                 item.setSelected(false);
-            }
-            if (mController != null) {
-                boolean changed = mController.onOpen();
             }
             layoutPie();
             animateOpen();
@@ -441,6 +470,7 @@ public class PieMenu extends FrameLayout {
             mCenter.y = getHeight();
         }
         mCenter.x = x;
+
     }
 
     private void setColors() {
@@ -449,17 +479,27 @@ public class PieMenu extends FrameLayout {
             setBackgroundColor();
             setGlowColor();
         }
+
+        mStatusPath = new Path();
+        mStatusPath.addCircle(mCenter.x, mCenter.y, mRadius+mRadiusInc, Path.Direction.CW);
+
     }
 
     private void setBackgroundColor() {
         ColorUtils.ColorSettingInfo colorInfo = ColorUtils.getColorSettingInfo(mContext,
                 Settings.System.NAV_BAR_COLOR);
+
         int newColor = 0xFF000000;
         if (!colorInfo.lastColorString.equals(mLastBackgroundColor.lastColorString)) {
             if (!colorInfo.isLastColorNull) {
                 newColor = colorInfo.lastColor;
             }
             mNormalPaint.setColor(newColor);
+
+        if (!colorInfo.lastColorString.equals(mLastBackgroundColor.lastColorString) && mPerAppColor) {
+            int colorRgb = ColorUtils.extractRGB(colorInfo.lastColor);
+            mNormalPaint.setColor(colorRgb | 0xAA000000);
+
             mLastBackgroundColor = colorInfo;
         }
     }
@@ -467,6 +507,7 @@ public class PieMenu extends FrameLayout {
     private void setGlowColor() {
         ColorUtils.ColorSettingInfo colorInfo = ColorUtils.getColorSettingInfo(mContext,
                 Settings.System.NAV_GLOW_COLOR);
+
         int newColor = 0xE033B5E5;
         if (!colorInfo.lastColorString.equals(mLastGlowColor.lastColorString)) {
             if (!colorInfo.isLastColorNull) {
@@ -474,6 +515,19 @@ public class PieMenu extends FrameLayout {
             }
             mSelectedPaint.setColor(newColor);
             setDrawingAlpha(mSelectedPaint, 0.7f);
+
+        if (!colorInfo.lastColorString.equals(mLastGlowColor.lastColorString) && mPerAppColor) {
+            ColorUtils.ColorSettingInfo buttonColorInfo = ColorUtils.getColorSettingInfo(mContext,
+                    Settings.System.NAV_BUTTON_COLOR);
+
+            // This helps us to discern when glow has the same color as the button color,
+            // in which case we have to counteract in order to prevent both from swallowing each other
+            int glowRgb = ColorUtils.extractRGB(colorInfo.lastColor);
+            int buttonRgb = ColorUtils.extractRGB(buttonColorInfo.lastColor);
+            mGlowColorHelper = glowRgb == buttonRgb;
+            mSelectedPaint.setColor(glowRgb | 0xAA000000);
+            mStatusPaint.setColor(glowRgb);
+
             mLastGlowColor = colorInfo;
         }
     }
@@ -541,13 +595,7 @@ public class PieMenu extends FrameLayout {
         }
     }
 
-    /**
-     * converts a
-     *
-     * @param angle from 0..PI to Android degrees (clockwise starting at 3
-     *        o'clock)
-     * @return skia angle
-     */
+    // param angle from 0..PI to Android degrees (clockwise starting at 3
     private float getDegrees(double angle) {
         return (float) (270 - 180 * angle / Math.PI);
     }
@@ -567,10 +615,6 @@ public class PieMenu extends FrameLayout {
         }
     }
 
-    int mBatteryBackgroundAlpha;
-    int mBatteryJuiceAlpha;
-    int mBatteryMeter;
-
     private void animateIn() {
         // Reset base values
         mBatteryMeter = 0;
@@ -587,11 +631,11 @@ public class PieMenu extends FrameLayout {
         final int batteryLevel = mPolicy.getBatteryLevel();
         if(batteryLevel <= PiePolicy.LOW_BATTERY_LEVEL
                 && batteryLevel > PiePolicy.CRITICAL_BATTERY_LEVEL) {
-            mBatteryJuice.setColor(0xffbb33);
+            mBatteryJuice.setColor(COLOR_DEFAULT_BATTERY_JUICE_LOW);
         } else if(batteryLevel <= PiePolicy.CRITICAL_BATTERY_LEVEL) {
-            mBatteryJuice.setColor(0xff4444);
+            mBatteryJuice.setColor(COLOR_DEFAULT_BATTERY_JUICE_CRITICAL);
         } else {
-            mBatteryJuice.setColor(0x33b5e5);
+            mBatteryJuice.setColor(COLOR_DEFAULT_BATTERY_JUICE);
         }
 
         // Background
@@ -676,6 +720,7 @@ public class PieMenu extends FrameLayout {
         mOutroAnimation.start();
     }
 
+
     float mCharOffset[];
 
 
@@ -683,10 +728,13 @@ public class PieMenu extends FrameLayout {
     int mGlowOffset = 0;
 
 
+
+
     @Override
     protected void onDraw(Canvas canvas) {
         if (mOpen) {
             int state;
+
             if (mUseBackground) {
                 int w = mBackground.getIntrinsicWidth();
                 int h = mBackground.getIntrinsicHeight();
@@ -699,22 +747,26 @@ public class PieMenu extends FrameLayout {
                 }
                 mBackground.draw(canvas);
                 canvas.restoreToCount(state);
+
+
+            // Draw background
+            if (mStatusMode != 0) {
+                canvas.drawARGB(mBackgroundOpacity, 0, 0, 0);
+
             }
 
+            // Draw top window glow, indicating the notification tray
             Bitmap mBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.bottom_divider_glow);
-            canvas.drawBitmap(mBitmap, null, new Rect(0,0,getWidth(),3), mGlowPaint);
+            canvas.drawBitmap(mBitmap, null, new Rect(0,0,getWidth(),3), null);
             Bitmap mBitmap1 = BitmapFactory.decodeResource(getResources(), R.drawable.notify_item_glow_bottom);
-            canvas.drawBitmap(mBitmap1, null, new Rect(0,0,getWidth(),mGlowOffset), mGlowPaint);
-            canvas.drawBitmap(mBitmap1, null, new Rect(0,0,getWidth(),mGlowOffset), mGlowPaint);
+            canvas.drawBitmap(mBitmap1, null, new Rect(0,0,getWidth(),mGlowOffset), null);
+            canvas.drawBitmap(mBitmap1, null, new Rect(0,0,getWidth(),mGlowOffset), null);
 
             // draw base menu
-            PieItem last = mCurrentItem;
-            if (mOpenItem != null) {
-                last = mOpenItem;
-            }
             for (PieItem item : mItems) {
                 drawItem(canvas, item);
             }
+
 
 
 
@@ -831,6 +883,66 @@ public class PieMenu extends FrameLayout {
 
 
 
+
+            // Paint status report only if settings allow
+            if (mStatusMode != 0) {
+                // Draw Battery
+                state = canvas.save();
+                canvas.rotate(90 + (mCharOffset[1] / 2), mCenter.x, mCenter.y);
+
+                int inner = (int)((mRadius + mRadiusInc - 2) + mTouchOffset * 0.7f);
+                int outer = (int)(mRadius + mRadiusInc - 2 + mTouchOffset * 1.7f);
+
+                Path mBatteryPath = makeSlice(mPanel.getDegree() + 13, mPanel.getDegree() + 90 - 2, 
+                    inner, outer, mCenter);
+
+                mBatteryBackground.setAlpha(mBatteryBackgroundAlpha);
+                canvas.drawPath(mBatteryPath, mBatteryBackground);
+                canvas.restoreToCount(state);
+
+                state = canvas.save();
+                canvas.rotate(90, mCenter.x, mCenter.y);
+                Path mBatteryPath2 = makeSlice(mPanel.getDegree() + 13, mPanel.getDegree() + mBatteryMeter - 2, 
+                        inner, outer, mCenter);
+                mBatteryJuice.setAlpha(mBatteryJuiceAlpha);
+                canvas.drawPath(mBatteryPath2, mBatteryJuice);
+                canvas.restoreToCount(state);
+
+                // Draw clock
+                if (mStatusPath != null) {
+                    mStatusPaint.setColor(COLOR_DEFAULT_STATUS);
+                    mStatusPaint.setTextSize(125);
+                    mStatusPaint.setAlpha(mTextAlpha);
+                    mStatusPaint.setTextScaleX(1.2f);
+
+                    state = canvas.save();
+                    float pos = mPanel.getDegree() + 125;
+                    canvas.rotate(pos, mCenter.x, mCenter.y);
+                    float lastPos = 0;
+                    for( int i = 0; i < mStatusText.length(); i++ ) {
+                        char character = mStatusText.charAt(i);
+                        canvas.drawTextOnPath("" + character, mStatusPath, lastPos, -mCharOffset[i] - mTouchOffset * 2.3f, mStatusPaint);
+                        lastPos += mStatusPaint.measureText("" + character) * (character == '1' || character == ':' ? 0.5f : 0.8f);
+                    }
+                    mStatusPaint.setTextSize(35);
+                    String amPm = mPolicy.getAmPm();
+                    lastPos -= mStatusPaint.measureText(amPm);
+                    canvas.drawTextOnPath(amPm, mStatusPath, lastPos, -mCharOffset[mStatusText.length()-1] - 140, mStatusPaint);
+                    canvas.restoreToCount(state);
+
+                    // Device status information and date
+                    state = canvas.save();
+                    pos = mPanel.getDegree() + 180;
+                    canvas.rotate(pos, mCenter.x, mCenter.y);
+                    mStatusPaint.setTextSize(20);
+                    canvas.drawTextOnPath(mPolicy.getNetworkProvider(), mStatusPath, mCharOffset[4], -95, mStatusPaint);
+                    canvas.drawTextOnPath(mPolicy.getSimpleDate(), mStatusPath, mCharOffset[4], -70, mStatusPaint);
+                    canvas.drawTextOnPath(mPolicy.getBatteryLevelReadable(), mStatusPath, mCharOffset[4], -45, mStatusPaint);
+                    canvas.drawTextOnPath(mPolicy.getWifiSsid(), mStatusPath, mCharOffset[4], -20, mStatusPaint);
+                    canvas.restoreToCount(state);
+                }
+            }
+
         }
     }
 
@@ -877,19 +989,14 @@ public class PieMenu extends FrameLayout {
     }
 
     private Path makeSlice(float start, float end, int outer, int inner, Point center) {
-        RectF bb =
-                new RectF(center.x - outer, center.y - outer, center.x + outer,
-                        center.y + outer);
-        RectF bbi =
-                new RectF(center.x - inner, center.y - inner, center.x + inner,
-                        center.y + inner);
+        RectF bb = new RectF(center.x - outer, center.y - outer, center.x + outer, center.y + outer);
+        RectF bbi = new RectF(center.x - inner, center.y - inner, center.x + inner, center.y + inner);
         Path path = new Path();
         path.arcTo(bb, start, end - start, true);
         path.arcTo(bbi, end, start - end);
         path.close();
         return path;
     }
-
 
     // touch handling for pie
     @Override
@@ -1071,11 +1178,6 @@ public class PieMenu extends FrameLayout {
     }
     boolean mPanelActive = false;
 
-    /**
-     * enter a slice for a view
-     * updates model only
-     * @param item
-     */
     private void onEnter(PieItem item) {
         // deselect
         if (mCurrentItem != null) {
@@ -1087,9 +1189,6 @@ public class PieMenu extends FrameLayout {
             item.setSelected(true);
             mPieView = null;
             mCurrentItem = item;
-            if ((mCurrentItem != mOpenItem) && mCurrentItem.hasItems()) {
-                mOpenItem = item;
-            }
         } else {
             mCurrentItem = null;
         }
@@ -1099,9 +1198,6 @@ public class PieMenu extends FrameLayout {
     private void deselect() {
         if (mCurrentItem != null) {
             mCurrentItem.setSelected(false);
-        }
-        if (mOpenItem != null) {
-            mOpenItem = null;
         }
         mCurrentItem = null;
         mPieView = null;
@@ -1146,11 +1242,6 @@ public class PieMenu extends FrameLayout {
 
     }
 
-    /**
-     *
-     * @param polar x: angle, y: dist
-     * @return the item at angle/dist or null
-     */
     private PieItem findItem(float polar) {
         if (mItems != null) {
             int c = 0;
