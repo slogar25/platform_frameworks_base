@@ -911,7 +911,7 @@ public class PieMenu extends FrameLayout {
                 // Draw clock
                 if (mStatusPath != null) {
                     mStatusPaint.setColor(COLOR_DEFAULT_STATUS);
-                    mStatusPaint.setTextSize(125);
+                    mStatusPaint.setTextSize(130);
                     mStatusPaint.setAlpha(mTextAlpha);
                     mStatusPaint.setTextScaleX(1.2f);
 
@@ -936,14 +936,16 @@ public class PieMenu extends FrameLayout {
                     float lastPos = 0;
                     for(int i = 0; i < mStatusText.length(); i++) {
                         char character = mStatusText.charAt(i);
-                        canvas.drawTextOnPath("" + character, mStatusPath, lastPos, -mTouchOffset * 2.3f, mStatusPaint);
+                        canvas.drawTextOnPath("" + character, mStatusPath, lastPos,
+                                -mTouchOffset * 2.3f, mStatusPaint);
                         lastPos += offsets[i];
                     }
 
                     mStatusPaint.setTextSize(35);
                     String amPm = mPolicy.getAmPm();
                     lastPos -= mStatusPaint.measureText(amPm);
-                    canvas.drawTextOnPath(amPm, mStatusPath, lastPos, -mCharOffset[mStatusText.length()-1] - mTouchOffset * 5.8f, mStatusPaint);
+                    canvas.drawTextOnPath(amPm, mStatusPath, lastPos,
+                            -mCharOffset[mStatusText.length()-1] - mTouchOffset * 5.8f, mStatusPaint);
                     canvas.restoreToCount(state);
 
                     // Device status information and date
@@ -1056,40 +1058,13 @@ public class PieMenu extends FrameLayout {
 
 
                 // Lets put the notification panel back
-                if(mPanelParentChanged) {
-                    //ViewManager currentParent = (ViewManager)mPanel.getParent();
-                    mScrollView.removeView(mPanel.getBar().getNotificationRowLayout());
-                    mWindowManager.removeView(mContainer);
-                    WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            WindowManager.LayoutParams.TYPE_STATUS_BAR_PANEL,
-                            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                                    | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                                    | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                                    | WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
-                                    | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH,
-                            PixelFormat.TRANSLUCENT);
-                    mPanelParent.addView(mPanel.getBar().getNotificationRowLayout(), lp);
-                    mPanelActive = false;
-                    mPanelParentChanged = false;
-                }
+                hideNotificationsPanel();
 
                 // Open the notification shade
                 if (mPanelActive) {
                     mPanelParent.removeView(mPanel.getBar().getNotificationRowLayout());
-                    WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            WindowManager.LayoutParams.TYPE_STATUS_BAR_PANEL,
-                            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                                    | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                                    | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                                    | WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
-                                    | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH,
-                            PixelFormat.TRANSLUCENT);
                     mScrollView.addView(mPanel.getBar().getNotificationRowLayout());
-                    mWindowManager.addView(mContainer, lp);
+                    mWindowManager.addView(mContainer, getNotificationsPanelLayoutParams());
                     mPanelParentChanged = true;
                     if(hapticFeedback) mVibrator.vibrate(2);
 
@@ -1193,6 +1168,30 @@ public class PieMenu extends FrameLayout {
         return false;
     }
     boolean mPanelActive = false;
+
+    public void hideNotificationsPanel() {
+        if(mPanelParentChanged) {
+            mScrollView.removeView(mPanel.getBar().getNotificationRowLayout());
+            mWindowManager.removeView(mContainer);
+            mPanelParent.addView(mPanel.getBar()
+                    .getNotificationRowLayout(), getNotificationsPanelLayoutParams());
+            mPanelActive = false;
+            mPanelParentChanged = false;
+        }
+    }
+
+    private WindowManager.LayoutParams getNotificationsPanelLayoutParams() {
+        return new WindowManager.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_STATUS_BAR_PANEL,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                        | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+                        | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH,
+                PixelFormat.TRANSLUCENT);
+    }
 
     private void onEnter(PieItem item) {
         // deselect

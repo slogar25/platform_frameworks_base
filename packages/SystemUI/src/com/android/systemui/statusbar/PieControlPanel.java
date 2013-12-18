@@ -104,6 +104,10 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
         return mStatusBar;
     }
 
+    public void animateCollapsePanels() {
+        mPieControl.getPieMenu().hideNotificationsPanel();
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         return mPieControl.onTouchEvent(event);
@@ -193,6 +197,33 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
             injectKeyDelayed(KeyEvent.KEYCODE_MENU);
         } else if (buttonName.equals(PieControl.RECENT_BUTTON)) {
             mStatusBar.toggleRecentApps();
+
+
+        } else if (buttonName.equals(PieControl.CLEAR_ALL_BUTTON)) {
+            mStatusBar.clearRecentApps();
+        } else if (buttonName.equals(PieControl.SEARCH_BUTTON)) {
+            launchAssistAction();
+        }
+    }
+
+    private Intent getAssistIntent() {
+        Intent intent = ((SearchManager) mContext.getSystemService(Context.SEARCH_SERVICE))
+                .getAssistIntent(mContext, UserHandle.USER_CURRENT);
+        return intent;
+    }
+
+    private void launchAssistAction() {
+        Intent intent = getAssistIntent();
+        if(intent != null) {
+            try {
+                ActivityOptions opts = ActivityOptions.makeCustomAnimation(mContext,
+                        R.anim.search_launch_enter, R.anim.search_launch_exit);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                mContext.startActivityAsUser(intent, opts.toBundle(),
+                        new UserHandle(UserHandle.USER_CURRENT));
+            } catch (ActivityNotFoundException e) {
+            }
+
         }
         show(false);
     }
