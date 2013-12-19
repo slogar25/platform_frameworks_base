@@ -188,6 +188,7 @@ public class PieItem {
 
     }
 
+
     public void setColor(int color, boolean pac) {
         ImageView imageView = ((ImageView) mView);
         Drawable drawable = imageView.getDrawable();
@@ -197,6 +198,12 @@ public class PieItem {
         } else {
             drawable.clearColorFilter();
         }
+
+
+    public void setColor(int color) {
+        ImageView imageView = ((ImageView) mView);
+        Drawable drawable = imageView.getDrawable();
+        drawable.setColorFilter(color, Mode.SRC_ATOP);
 
         imageView.setImageDrawable(drawable);
     }
