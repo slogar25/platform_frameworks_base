@@ -222,7 +222,6 @@ public class PieMenu extends FrameLayout {
     float mBatteryMeter = 0;
 
     // Flags
-    private boolean mPanelActive;
     private boolean mPerAppColor;
     private boolean mOpen;
     private boolean mStatusAnimate;
@@ -1256,11 +1255,12 @@ public class PieMenu extends FrameLayout {
             mGlowOffset = distanceY > shadeTreshold ? (int)(distanceY - shadeTreshold) : 0;
             
             // Trigger the shade?
-            if (!mPanelActive && distanceY > shadeTreshold) {
+            if (distanceY > shadeTreshold) {
                 // Give the user a small hint that he's inside the upper touch area
                 if(hapticFeedback) mVibrator.vibrate(2);
                 if(mFlipViewState == 0) mFlipViewState = NOTIFICATIONS_PANEL;
             }
+
 
             // Take back shade trigger if user decides to abandon his gesture
             if (distanceY < shadeTreshold) mPanelActive = false;
@@ -1275,6 +1275,8 @@ public class PieMenu extends FrameLayout {
             //} else {
             //    deselect();
             //}
+
+
 
             // Check for onEnter separately or'll face constant deselect
             PieItem item = findItem(getPolar(x, y));
