@@ -235,7 +235,8 @@ public class PieMenu extends FrameLayout {
     private float mTextOffset = 0;
     private int mTextAlpha = 0;
     private float mCharOffset[];
-    private int mGlowOffset = 0;
+    private int mGlowOffsetLeft = 100;
+    private int mGlowOffsetRight = 100;
     int mBatteryBackgroundAlpha = 0;
     int mBatteryJuiceAlpha = 0;
     float mBatteryMeter = 0;
@@ -434,13 +435,13 @@ public class PieMenu extends FrameLayout {
                         float distanceY = Math.abs(event.getY() - scrollY);
                         float distanceX = Math.abs(event.getX() - scrollX);
                         if(distanceY > SCROLLING_DISTANCE_TRIGGER ||
-                                distanceX > SCROLLING_DISTANCE_TRIGGER) {
+                            distanceX > SCROLLING_DISTANCE_TRIGGER) {
                             hasScrolled = true;
                         }
                         break;
                     case MotionEvent.ACTION_UP:
                         if(!hasScrolled) {
-                            swapPanels();
+                            hidePanels(true);
                         }
                         break;
                 }
@@ -856,11 +857,11 @@ public class PieMenu extends FrameLayout {
             }
 
             // Draw top window glow, indicating the notification tray
-            Bitmap mBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.bottom_divider_glow);
+            /*Bitmap mBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.bottom_divider_glow);
             canvas.drawBitmap(mBitmap, null, new Rect(0,0,getWidth(),3), null);
             Bitmap mBitmap1 = BitmapFactory.decodeResource(getResources(), R.drawable.notify_item_glow_bottom);
             canvas.drawBitmap(mBitmap1, null, new Rect(0,0,getWidth(),mGlowOffset), null);
-            canvas.drawBitmap(mBitmap1, null, new Rect(0,0,getWidth(),mGlowOffset), null);
+            canvas.drawBitmap(mBitmap1, null, new Rect(0,0,getWidth(),mGlowOffset), null);*/
 
             // Draw base menu
             for (PieItem item : mItems) {
@@ -988,12 +989,12 @@ public class PieMenu extends FrameLayout {
             Paint chevronBackground1 = new Paint();
             chevronBackground1.setAntiAlias(true);
             chevronBackground1.setColor(0xffbb33);
-            chevronBackground1.setAlpha(100+mGlowOffset);
+            chevronBackground1.setAlpha(mGlowOffsetLeft);
 
             Paint chevronBackground2 = new Paint();
             chevronBackground2.setAntiAlias(true);
             chevronBackground2.setColor(0x99cc00);
-            chevronBackground2.setAlpha(100+mGlowOffset);
+            chevronBackground2.setAlpha(mGlowOffsetRight);
 
                 state = canvas.save();
                 canvas.rotate(90, mCenter.x, mCenter.y);
@@ -1091,8 +1092,8 @@ public class PieMenu extends FrameLayout {
                     canvas.drawTextOnPath(mPolicy.getWifiSsid(), mStatusPath, mCharOffset[4], -20, mStatusPaint);
 
                     mStatusPaint.setTextSize(25);
-                    mStatusPaint.setAlpha(150);
-                    float scale = 0.5f;
+                    mStatusPaint.setAlpha(mGlowOffsetRight);
+                    float scale = 0.55f;
                     float offset = -250;
                     int row = 4;
                     NotificationData notifData = mPanel.getBar().getNotificationData();
@@ -1108,13 +1109,11 @@ public class PieMenu extends FrameLayout {
 
                             mStatusPaint.setTextScaleX(scale);
                             canvas.drawTextOnPath(tickerText.toString(), mStatusPath, mCharOffset[row], offset, mStatusPaint);
-                            scale -= 0.015;
+                            scale -= 0.014;
                             offset -= 35;
                             row += 1;
 
                             if (entry.icon != null) {
-
-                                
                                 StatusBarIconView iconView = entry.icon;
                                 StatusBarIcon icon = iconView.getStatusBarIcon();
                                 Drawable drawable = entry.icon.getIcon(mContext, icon);
@@ -1124,7 +1123,6 @@ public class PieMenu extends FrameLayout {
                                 int posY = (int)mCenter.y - 40;
                                 canvas.drawBitmap(bitmap, null, new Rect(posX, posY,posX + 30,posY +30), mStatusPaint);
                             }
-
                         }
                     }
                     canvas.restoreToCount(state);
@@ -1190,6 +1188,7 @@ public class PieMenu extends FrameLayout {
     @Override
     public boolean onTouchEvent(MotionEvent evt) {
 
+
         float x = evt.getX();
         float y = evt.getY();
         int orient = mPanel.getOrientation();
@@ -1201,13 +1200,16 @@ public class PieMenu extends FrameLayout {
         int shadeTreshold = getHeight() - mTouchOffset * 10;
         boolean pieTreshold = distance > mTouchOffset && distance < (int)(mRadius + mRadiusInc) * 2.5f;
 
+        if (evt.getPointerCount() > 1) return true;
+
+
         float x = evt.getRawX();
         float y = evt.getRawY();
         float distanceX = mCenter.x-x;
         float distanceY = mCenter.y-y;
         float distance = (float)Math.sqrt(Math.pow(distanceX, 2) + Math.pow(distanceY, 2));
 
-        float shadeTreshold = getHeight() * 0.6f;
+        float shadeTreshold = mRadius + mRadiusInc + mTouchOffset * 7.65f; 
         boolean pieTreshold = distanceY < shadeTreshold;
 
         final boolean hapticFeedback = Settings.System.getInt(mContext.getContentResolver(),
@@ -1348,13 +1350,21 @@ public class PieMenu extends FrameLayout {
 
             return true;
         } else if (MotionEvent.ACTION_MOVE == action) {
-            mGlowOffset = distanceY > shadeTreshold ? (int)(distanceY - shadeTreshold) : 0;
-            
-            // Trigger the shade?
-            if (distanceY > shadeTreshold && mFlipViewState == -1) {
-                // Give the user a small hint that he's inside the upper touch area
-                if(hapticFeedback) mVibrator.vibrate(2);
-                if(mFlipViewState == -1) mFlipViewState = NOTIFICATIONS_PANEL;
+
+            // Trigger the shades?
+            if (distance > shadeTreshold) {
+                if (distanceX > 0 && mFlipViewState != QUICK_SETTINGS_PANEL) {
+                    mGlowOffsetRight = 100;
+                    mGlowOffsetLeft = 255;
+                    mFlipViewState = QUICK_SETTINGS_PANEL;
+                    if(hapticFeedback) mVibrator.vibrate(2);
+                } else if (distanceX < 0 && mFlipViewState != NOTIFICATIONS_PANEL) {
+                    mGlowOffsetRight = 255;
+                    mGlowOffsetLeft = 100;
+                    mFlipViewState = NOTIFICATIONS_PANEL;
+                    if(hapticFeedback) mVibrator.vibrate(2);
+                }
+                deselect();
             }
 
 
@@ -1376,6 +1386,7 @@ public class PieMenu extends FrameLayout {
 
 
             // Take back shade trigger if user decides to abandon his gesture
+
             if (distanceY < shadeTreshold) mFlipViewState = -1;
 
 
@@ -1386,6 +1397,21 @@ public class PieMenu extends FrameLayout {
                     onEnter(item);
                 } else {
                     deselect();
+
+            if (distance < shadeTreshold) {
+                mFlipViewState = -1;
+                mGlowOffsetLeft = 100;
+                mGlowOffsetRight = 100;
+
+                // Check for onEnter separately or'll face constant deselect
+                PieItem item = findItem(getPolar(x, y));
+                if (item != null) {
+                    if (distanceY < shadeTreshold && distance > mTouchOffset * 2.5f) {
+                        onEnter(item);
+                    } else {
+                        deselect();
+                    }
+
                 }
             }
 
