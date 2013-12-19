@@ -44,6 +44,7 @@ import android.view.MotionEvent;
 import android.widget.FrameLayout;
 
 import com.android.systemui.R;
+import com.android.systemui.statusbar.phone.PanelBar;
 import com.android.systemui.statusbar.tablet.StatusBarPanel;
 import com.android.systemui.statusbar.PieControl.OnNavButtonPressedListener;
 
@@ -105,7 +106,7 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
     }
 
     public void animateCollapsePanels() {
-        mPieControl.getPieMenu().hidePanels();
+        mPieControl.getPieMenu().hidePanels(true);
     }
 
     @Override

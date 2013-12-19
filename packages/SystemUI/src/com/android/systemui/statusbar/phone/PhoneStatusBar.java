@@ -1486,6 +1486,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
 
         mStatusBarWindow.cancelExpandHelper();
         mStatusBarView.collapseAllPanels(true);
+        mStatusBarView.setAlternativePanel(mPieControlPanel);
         super.animateCollapsePanels(flags);
     }
 
