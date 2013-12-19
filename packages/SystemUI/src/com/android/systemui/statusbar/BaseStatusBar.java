@@ -199,6 +199,12 @@ public abstract class BaseStatusBar extends SystemUI implements
     }
 
 
+
+    public NotificationData getNotificationData() {
+        return mNotificationData;
+    }
+
+
     public NotificationRowLayout getNotificationRowLayout() {
         return mPile;
     }
