@@ -20,6 +20,11 @@ package com.android.systemui.statusbar;
 import android.content.Context;
 
 
+
+
+import android.content.Intent;
+import android.content.res.Configuration;
+
 import android.graphics.Point;
 import android.graphics.PointF;
 
@@ -122,6 +127,11 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
     @Override
     protected void onAttachedToWindow () {
         super.onAttachedToWindow();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        show(false);
     }
 
     public void setHandler(Handler h) {
