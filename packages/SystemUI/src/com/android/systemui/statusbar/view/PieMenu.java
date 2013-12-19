@@ -218,6 +218,7 @@ public class PieMenu extends FrameLayout {
     private static final int COLOR_ALPHA_MASK = 0xaa000000;
     private static final int COLOR_OPAQUE_MASK = 0xff000000;
     private static final int COLOR_PIE_BACKGROUND = 0xaaff005e;
+    private static final int COLOR_PIE_BUTTON = 0xb2ffffff;
     private static final int COLOR_PIE_SELECT = 0xaadbff00;
     private static final int COLOR_PIE_OUTLINES = 0x55ffffff;
     private static final int COLOR_CHEVRON_LEFT = 0x0999cc;
@@ -526,6 +527,11 @@ public class PieMenu extends FrameLayout {
             mPieOutlines.setColor(buttonColorInfo.lastColor);
             mBatteryJuice.setColorFilter(buttonColorInfo.isLastColorNull ? null :
                     new PorterDuffColorFilter(ColorUtils.extractRGB(buttonColorInfo.lastColor) | COLOR_OPAQUE_MASK, Mode.SRC_ATOP));
+
+            buttonColorInfo = ColorUtils.getColorSettingInfo(mContext, Settings.System.NAV_BUTTON_COLOR);
+            for (PieItem item : mItems) {
+                item.setColor(buttonColorInfo.isLastColorNull ? COLOR_PIE_BUTTON : buttonColorInfo.lastColor);
+            }
         } else {
             mPieBackground.setColor(COLOR_PIE_BACKGROUND);
             mPieSelected.setColor(COLOR_PIE_SELECT);
@@ -538,6 +544,7 @@ public class PieMenu extends FrameLayout {
             mBatteryJuice.setColorFilter(null);
         }
 
+
         buttonColorInfo = ColorUtils.getColorSettingInfo(mContext, Settings.System.NAV_BUTTON_COLOR);
 
         for (PieItem item : mItems) {
@@ -549,6 +556,8 @@ public class PieMenu extends FrameLayout {
             }
 
         }
+
+
 
         // Notifications
         mNotificationCount = 0;
