@@ -390,6 +390,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
             }});
 
         mStatusBarView = (PhoneStatusBarView) mStatusBarWindow.findViewById(R.id.status_bar);
+        mStatusBarView.setStatusBar(this);
         mStatusBarView.setBar(this);
 
         PanelHolder holder = (PanelHolder) mStatusBarWindow.findViewById(R.id.panel_holder);
@@ -1486,7 +1487,6 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
 
         mStatusBarWindow.cancelExpandHelper();
         mStatusBarView.collapseAllPanels(true);
-        mStatusBarView.setAlternativePanel(mPieControlPanel);
         super.animateCollapsePanels(flags);
     }
 
