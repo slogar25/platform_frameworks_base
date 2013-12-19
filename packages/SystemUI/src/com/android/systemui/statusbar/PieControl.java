@@ -36,9 +36,6 @@ import android.widget.TextView;
 import com.android.systemui.statusbar.PieControlPanel;
 import com.android.systemui.statusbar.view.PieItem;
 import com.android.systemui.statusbar.view.PieMenu;
-import com.android.systemui.statusbar.view.PieMenu.PieView.OnLayoutListener;
-import com.android.systemui.statusbar.view.PieStackView;
-import com.android.systemui.statusbar.view.PieStackView.OnCurrentListener;
 
 import com.android.systemui.R;
 
@@ -69,9 +66,19 @@ public class PieControl implements OnClickListener, NavigationCallback {
     private PieItem mRecent;
     private PieItem mSearch;
     private OnNavButtonPressedListener mListener;
+    private PieControlPanel mPanel;
+
 
     public PieControl(Context context) {
+
+    private int mNavigationIconHints;
+
+    private boolean mIsAssistantAvailable;
+
+    public PieControl(Context context, PieControlPanel panel) {
+
         mContext = context;
+        mPanel = panel;
         mItemSize = (int) context.getResources().getDimension(R.dimen.pie_item_size);
     }
 
@@ -79,9 +86,13 @@ public class PieControl implements OnClickListener, NavigationCallback {
         return mPie;
     }
 
+    public void init() {
+        mPie.init();
+    }
+
     public void attachToContainer(FrameLayout container) {
         if (mPie == null) {
-            mPie = new PieMenu(mContext);
+            mPie = new PieMenu(mContext, mPanel);
             LayoutParams lp = new LayoutParams(LayoutParams.MATCH_PARENT,
                     LayoutParams.MATCH_PARENT);
             mPie.setLayoutParams(lp);
