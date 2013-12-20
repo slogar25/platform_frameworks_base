@@ -33,6 +33,11 @@ import android.hardware.input.InputManager;
 import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
+
+
+import android.os.UserHandle;
+import android.provider.Settings;
+
 import android.util.AttributeSet;
 import android.util.Slog;
 
@@ -147,6 +152,22 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
                 .getPieTriggerLayoutParams(mContext, mOrientation));
         setCenter();
         show(mShowing);
+
+        int pieGravity = 3;
+        switch(mOrientation) {
+            case Gravity.LEFT:
+                pieGravity = 0;
+                break;
+            case Gravity.TOP:
+                pieGravity = 1;
+                break;
+            case Gravity.RIGHT:
+                pieGravity = 2;
+                break;
+        }
+
+        Settings.System.putInt(mContext.getContentResolver(),
+            Settings.System.PIE_GRAVITY, pieGravity);
     }
 
     public void setCenter() {
