@@ -17,6 +17,7 @@
 package com.android.systemui.statusbar;
 
 
+
 import android.content.Context;
 
 
@@ -28,11 +29,23 @@ import android.content.res.Configuration;
 import android.graphics.Point;
 import android.graphics.PointF;
 
+
+import android.app.Activity;
+import android.app.ActivityOptions;
+import android.app.SearchManager;
+import android.content.ActivityNotFoundException;
+import android.content.Context;
+import android.content.Intent;
+import android.content.res.Configuration;
+import android.graphics.Point;
+import android.graphics.PointF;
+
 import android.graphics.Rect;
 import android.hardware.input.InputManager;
 import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
+
 
 
 import android.os.UserHandle;
@@ -42,15 +55,27 @@ import android.util.AttributeSet;
 import android.util.Slog;
 
 
+
+import android.os.UserHandle;
+import android.provider.Settings;
+import android.util.AttributeSet;
+import android.util.Slog;
+
 import android.view.Display;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 
+
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
+
 import android.widget.FrameLayout;
 
 import com.android.systemui.R;
@@ -70,6 +95,11 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
     private int mWidth;
     private int mHeight;
 
+
+
+
+    private View mTrigger;
+    private WindowManager mWindowManager;
 
 
     private View mTrigger;
@@ -99,7 +129,11 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
     }
 
     public int getDegree() {
+
         switch( mOrientation ) {
+
+        switch(mOrientation) {
+
             case Gravity.LEFT: return 180;
             case Gravity.TOP: return -90;
             case Gravity.RIGHT: return 0;
@@ -197,6 +231,10 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
         super.onFinishInflate();
         mContentFrame = (ViewGroup)findViewById(R.id.content_frame);
         setWillNotDraw(false);
+
+
+        mPieControl.setIsAssistantAvailable(getAssistIntent() != null);
+
         mPieControl.attachToContainer(this);
         mPieControl.forceToTop(this);
         show(false);
@@ -213,6 +251,7 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
     public void show(boolean show) {
         mShowing = show;
         setVisibility(show ? View.VISIBLE : View.GONE);
+
 
 
         if (show) {
@@ -245,6 +284,9 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
 
         setCenter();
 
+
+        setCenter();
+
         mPieControl.show(show);
     }
 
@@ -266,6 +308,9 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
             injectKeyDelayed(KeyEvent.KEYCODE_MENU);
         } else if (buttonName.equals(PieControl.RECENT_BUTTON)) {
             mStatusBar.toggleRecentApps();
+
+
+
 
 
         } else if (buttonName.equals(PieControl.CLEAR_ALL_BUTTON)) {
@@ -293,8 +338,12 @@ public class PieControlPanel extends FrameLayout implements StatusBarPanel, OnNa
             } catch (ActivityNotFoundException e) {
             }
 
+
         }
         show(false);
+
+        }
+
     }
 
     public void injectKeyDelayed(int keycode){

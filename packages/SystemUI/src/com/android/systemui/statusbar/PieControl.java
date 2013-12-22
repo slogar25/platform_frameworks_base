@@ -18,6 +18,10 @@
 package com.android.systemui.statusbar;
 
 import android.app.ActionBar.Tab;
+
+
+import android.app.StatusBarManager;
+
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -33,6 +37,11 @@ import android.widget.ImageView;
 import android.widget.ImageView.ScaleType;
 import android.widget.TextView;
 
+
+
+import com.android.systemui.recent.RecentsActivity;
+import com.android.systemui.recent.RecentsActivity.NavigationCallback;
+
 import com.android.systemui.statusbar.PieControlPanel;
 import com.android.systemui.statusbar.view.PieItem;
 import com.android.systemui.statusbar.view.PieMenu;
@@ -46,7 +55,11 @@ import java.util.List;
  * Controller for Quick Controls pie menu
  */
 
+
 public class PieControl implements PieMenu.PieController, OnClickListener {
+
+public class PieControl implements OnClickListener, NavigationCallback {
+
 
 public class PieControl implements OnClickListener, NavigationCallback {
 
@@ -55,6 +68,10 @@ public class PieControl implements OnClickListener, NavigationCallback {
     public static final String MENU_BUTTON = "##menu##";
     public static final String SEARCH_BUTTON = "##search##";
     public static final String RECENT_BUTTON = "##recent##";
+
+
+    public static final String CLEAR_ALL_BUTTON = "##clear##";
+
 
     protected Context mContext;
     protected PieMenu mPie;
@@ -69,13 +86,19 @@ public class PieControl implements OnClickListener, NavigationCallback {
     private PieControlPanel mPanel;
 
 
+
     public PieControl(Context context) {
+
+
 
     private int mNavigationIconHints;
 
     private boolean mIsAssistantAvailable;
 
     public PieControl(Context context, PieControlPanel panel) {
+
+
+
 
         mContext = context;
         mPanel = panel;
@@ -98,7 +121,12 @@ public class PieControl implements OnClickListener, NavigationCallback {
             mPie.setLayoutParams(lp);
             populateMenu();
 
+
             mPie.setController(this);
+
+            // set recents activity navigation bar view
+            RecentsActivity.addNavigationCallback(this);
+
 
             // set recents activity navigation bar view
             RecentsActivity.addNavigationCallback(this);
@@ -118,10 +146,15 @@ public class PieControl implements OnClickListener, NavigationCallback {
         }
     }
 
+
     protected void setClickListener(OnClickListener listener, PieItem... items) {
         for (PieItem item : items) {
             item.getView().setOnClickListener(listener);
         }
+
+    protected void setIsAssistantAvailable(boolean isAvailable) {
+        mIsAssistantAvailable = isAvailable;
+
     }
 
     public boolean onTouchEvent(MotionEvent event) {
@@ -129,6 +162,7 @@ public class PieControl implements OnClickListener, NavigationCallback {
     }
 
     protected void populateMenu() {
+
 
         mBack = makeItem(R.drawable.ic_sysbar_back, 1);
         mHome = makeItem(R.drawable.ic_sysbar_home, 1);
@@ -149,12 +183,27 @@ public class PieControl implements OnClickListener, NavigationCallback {
 
         mPie.addItem(mMenu);
         mPie.addItem(mSearch);
+
+        mBack = makeItem(R.drawable.ic_sysbar_back, 1, BACK_BUTTON, false);
+        mHome = makeItem(R.drawable.ic_sysbar_home, 1, HOME_BUTTON, false);
+        mRecent = makeItem(R.drawable.ic_sysbar_recent, 1, RECENT_BUTTON, false);
+        mMenu = makeItem(R.drawable.ic_sysbar_menu, 1, MENU_BUTTON, mIsAssistantAvailable);
+        if(mIsAssistantAvailable) {
+            mSearch = makeItem(R.drawable.ic_sysbar_search_side, 1, SEARCH_BUTTON, true);
+        }
+
+        mPie.addItem(mMenu);
+        if(mIsAssistantAvailable) {
+            mPie.addItem(mSearch);
+        }
+
         mPie.addItem(mRecent);
         mPie.addItem(mHome);
         mPie.addItem(mBack);
     }
 
     @Override
+
     public void onClick(View v) {
         String buttonName = null;
         if (v == mBack.getView()) {
@@ -179,6 +228,32 @@ public class PieControl implements OnClickListener, NavigationCallback {
 
     protected PieItem makeItem(int image, int l, String name, boolean lesser) {
 
+
+    public void setNavigationIconHints(int button, int hints, boolean force) {
+        mNavigationIconHints = hints;
+
+        if (button == NavigationCallback.NAVBAR_RECENTS_HINT) {
+            boolean alt = (0 != (hints & StatusBarManager.NAVIGATION_HINT_RECENT_ALT));
+            mRecent.setIcon(alt ? R.drawable.ic_sysbar_recent_clear
+                    : R.drawable.ic_sysbar_recent);
+            mRecent.setName(alt ? CLEAR_ALL_BUTTON : RECENT_BUTTON);
+        }
+    }
+
+    @Override
+    public int getNavigationIconHints() {
+        return mNavigationIconHints;
+    }
+
+    @Override
+    public void onClick(View v) {
+        if (mListener != null) {
+            mListener.onNavButtonPressed((String) v.getTag());
+        }
+    }
+
+    protected PieItem makeItem(int image, int l, String name, boolean lesser) {
+
         ImageView view = new ImageView(mContext);
         view.setImageResource(image);
         view.setMinimumWidth(mItemSize);
@@ -187,12 +262,17 @@ public class PieControl implements OnClickListener, NavigationCallback {
         LayoutParams lp = new LayoutParams(mItemSize, mItemSize);
         view.setLayoutParams(lp);
 
+
         return new PieItem(view, mContext, l);
     }
 
     protected PieItem makeFiller() {
         return new PieItem(null, null, 1);
 
+        return new PieItem(view, mContext, l, name, lesser);
+
+
+        view.setOnClickListener(this);
         return new PieItem(view, mContext, l, name, lesser);
 
     }

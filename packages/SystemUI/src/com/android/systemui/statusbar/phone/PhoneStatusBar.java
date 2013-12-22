@@ -448,6 +448,11 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
             // no window manager? good luck with that
         }
 
+
+        // set recents activity navigation bar view
+        RecentsActivity.addNavigationCallback(mNavigationBarView);
+
+
         // figure out which pixel-format to use for the status bar.
         mPixelFormat = PixelFormat.OPAQUE;
 
@@ -665,6 +670,11 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
         if (mNavigationBarView != null) {
             mNavigationBarView.getBarTransitions().setContentVisible(true);
 
+    public QuickSettingsContainerView getQuickSettingsPanel() {
+        return mSettingsContainer;
+    }
+
+    @Override
     public QuickSettingsContainerView getQuickSettingsPanel() {
         return mSettingsContainer;
     }

@@ -29,6 +29,20 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
 import android.database.ContentObserver;
+
+
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.TransitionDrawable;
+import android.graphics.Paint;
+import android.graphics.PixelFormat;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuff.Mode;
+
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Build;
@@ -46,6 +60,7 @@ import android.service.notification.StatusBarNotification;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Display;
+import android.view.Gravity;
 import android.view.IWindowManager;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -81,6 +96,11 @@ import com.android.systemui.statusbar.policy.Clock;
 import com.android.systemui.statusbar.policy.NetworkController;
 
 import com.android.systemui.statusbar.policy.NotificationRowLayout;
+
+
+import com.android.systemui.statusbar.tablet.StatusBarPanel;
+import com.android.systemui.statusbar.view.PieStatusPanel;
+
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -141,6 +161,12 @@ public abstract class BaseStatusBar extends SystemUI implements
     protected IDreamManager mDreamManager;
     PowerManager mPowerManager;
     protected int mRowHeight;
+
+    // Pie controls
+    public PieControlPanel mPieControlPanel;
+    public View mPieControlsTrigger;
+    public View mContainer;
+    int mIndex;
 
     // Pie controls
     public PieControlPanel mPieControlPanel;
@@ -212,6 +238,21 @@ public abstract class BaseStatusBar extends SystemUI implements
     }
 
     public void collapse() {
+    }
+
+
+
+    public QuickSettingsContainerView getQuickSettingsPanel() {
+        // This method should be overriden
+        return null;
+    }
+
+    public NotificationData getNotificationData() {
+        return mNotificationData;
+    }
+
+    public NotificationRowLayout getNotificationRowLayout() {
+        return mPile;
     }
 
 
@@ -289,6 +330,7 @@ public abstract class BaseStatusBar extends SystemUI implements
     };
 
 
+
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -325,10 +367,14 @@ public abstract class BaseStatusBar extends SystemUI implements
         public PieControlsTouchListener(PieControlPanel panel) {
             mControlPanel = panel;
 
+
+    private class PieControlsTouchListener implements View.OnTouchListener {
+
         private int orient;
         private float initialX = 0;
         private float initialY = 0;
         int index;
+
 
 
 
@@ -355,6 +401,12 @@ public abstract class BaseStatusBar extends SystemUI implements
 
         mStatusBarContainer = new FrameLayout(mContext);
 
+
+        public PieControlsTouchListener() {
+            orient = mPieControlPanel.getOrientation();
+        }
+
+
         @Override
         public boolean onTouch(View v, MotionEvent event) {
             final int action = event.getAction();
@@ -366,6 +418,7 @@ public abstract class BaseStatusBar extends SystemUI implements
                         break;
                     case MotionEvent.ACTION_MOVE:
 
+
                         float deltaX = event.getX() - initialX;
                         float deltaY = event.getY() - initialY;
                         // Swipe up
@@ -374,6 +427,8 @@ public abstract class BaseStatusBar extends SystemUI implements
                             event.setAction(MotionEvent.ACTION_DOWN);
                             mControlPanel.onTouchEvent(event);
                         //}
+
+
 
                         float deltaX = Math.abs(event.getX() - initialX);
                         float deltaY = Math.abs(event.getY() - initialY);
@@ -386,6 +441,9 @@ public abstract class BaseStatusBar extends SystemUI implements
                             mPieControlPanel.onTouchEvent(event);
                         }
 
+
+
+
                 }
             } else {
                 return mPieControlPanel.onTouchEvent(event);
@@ -393,6 +451,7 @@ public abstract class BaseStatusBar extends SystemUI implements
             return false;
         }
     }
+
 
 
 
@@ -445,6 +504,8 @@ public abstract class BaseStatusBar extends SystemUI implements
         panel.setOrientation(gravity);
         mWindowManager.addView(panel, lp);
     }
+
+
 
 
 
@@ -615,6 +676,9 @@ public abstract class BaseStatusBar extends SystemUI implements
 
 
 
+
+
+
     private boolean showPie() {
         boolean expanded = Settings.System.getInt(mContext.getContentResolver(),
                 Settings.System.EXPANDED_DESKTOP_STATE, 0) == 1;
@@ -631,6 +695,7 @@ public abstract class BaseStatusBar extends SystemUI implements
         if (mPieControlPanel != null)  mWindowManager.removeView(mPieControlPanel);
         attachPie();
     }
+
 
 
     public View mContainer;
@@ -658,6 +723,8 @@ public abstract class BaseStatusBar extends SystemUI implements
             }
             if ((gravity & 8) != 0) {
                 addPieInLocation(Gravity.LEFT);
+
+
 
     private void attachPie() {
         if(showPie()) {
@@ -687,6 +754,9 @@ public abstract class BaseStatusBar extends SystemUI implements
                     addPieInLocation(Gravity.BOTTOM);
                     break;
 
+
+
+
             }
         } else {
             mPieControlsTrigger = null;
@@ -713,11 +783,18 @@ public abstract class BaseStatusBar extends SystemUI implements
         WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
+
                 WindowManager.LayoutParams.TYPE_INPUT_METHOD_DIALOG,
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                         | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+
+                WindowManager.LayoutParams.TYPE_STATUS_BAR_PANEL,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                        | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+
                         | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                 PixelFormat.TRANSLUCENT);
         lp.setTitle("PieControlPanel");
@@ -734,11 +811,17 @@ public abstract class BaseStatusBar extends SystemUI implements
               (gravity == Gravity.LEFT || gravity == Gravity.RIGHT ?
                     ViewGroup.LayoutParams.MATCH_PARENT : res.getDimensionPixelSize(R.dimen.pie_trigger_height)),
 
+
               WindowManager.LayoutParams.TYPE_INPUT_METHOD_DIALOG,
               WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                       | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                       | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                       | WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+
+              WindowManager.LayoutParams.TYPE_STATUS_BAR_PANEL,
+                      WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                      | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+
 
               WindowManager.LayoutParams.TYPE_STATUS_BAR_PANEL,
                       WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
@@ -960,6 +1043,14 @@ public abstract class BaseStatusBar extends SystemUI implements
     }
 
     public void onHeadsUpDismissed() {
+    }
+
+    @Override
+    public void animateCollapsePanels(int flags) {
+        if (mPieControlPanel != null
+                && flags == CommandQueue.FLAG_EXCLUDE_NONE) {
+            mPieControlPanel.animateCollapsePanels();
+        }
     }
 
     @Override

@@ -41,7 +41,12 @@ import libcore.icu.LocaleData;
 /**
  * Digital clock for the status bar.
  */
+
 public class Clock extends TextView implements DemoMode {
+
+public class Clock extends TextView {
+
+
     private boolean mAttached;
     private Calendar mCalendar;
     private String mClockFormatString;
@@ -105,10 +110,7 @@ public class Clock extends TextView implements DemoMode {
 
     }
 
-    @Override
-    protected void onAttachedToWindow() {
-        super.onAttachedToWindow();
-
+    public void startBroadcastReceiver() {
         if (!mAttached) {
             mAttached = true;
             IntentFilter filter = new IntentFilter();
@@ -140,6 +142,12 @@ public class Clock extends TextView implements DemoMode {
         startBroadcastReceiver();
     }
 
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        startBroadcastReceiver();
+    }
 
     @Override
     protected void onDetachedFromWindow() {
@@ -183,14 +191,19 @@ public class Clock extends TextView implements DemoMode {
         if (mDemoMode) return;
         mCalendar.setTimeInMillis(System.currentTimeMillis());
 
+
         setText(getSmallTime());
+
+        CharSequence seq = getSmallTime();
+        setText(seq);
+
 
         CharSequence seq = getSmallTime();
         setText(seq);
 
     }
 
-    private final CharSequence getSmallTime() {
+    public final CharSequence getSmallTime() {
         Context context = getContext();
         boolean is24 = DateFormat.is24HourFormat(context);
         LocaleData d = LocaleData.get(context.getResources().getConfiguration().locale);

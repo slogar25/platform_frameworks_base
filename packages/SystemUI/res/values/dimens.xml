@@ -209,6 +209,7 @@
 
 
 
+
     <!-- Quick Settings tile geometry: top interior margin, above icon -->
     <dimen name="qs_tile_margin_above_icon">27dp</dimen>
     <!-- Quick Settings tile geometry: gap between icon and text -->
@@ -231,6 +232,11 @@
     <dimen name="pie_panel_height">150dp</dimen>
 
     <!-- Pie contols sizing -->
+
+    <!-- PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE -->
+    <dimen name="pie_trigger_height">12dp</dimen>
+
+
 
     <!-- PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE -->
     <dimen name="pie_trigger_height">12dp</dimen>
@@ -264,6 +270,9 @@
     <!-- PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE PIE -->
 
 
+
     <!-- used by DessertCase -->
     <dimen name="dessert_case_cell_size">192dp</dimen>
+
+
 </resources>

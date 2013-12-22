@@ -62,7 +62,11 @@ public class PieItem {
         mEnabled = true;
         setAnimationAngle(getAnimationAngle());
         setAlpha(getAlpha());
+
         mName = name;
+
+        setName(name);
+
         mIsLesser = lesser;
     }
 
@@ -97,8 +101,19 @@ public class PieItem {
         mItems.add(item);
     }
 
+
     public String getName() {
         return  mName;
+
+
+    public void setName(String name) {
+        mName = name;
+        mView.setTag(mName);
+    }
+
+    public String getName() {
+        return mName;
+
     }
 
     public void setAlpha(float alpha) {
@@ -173,6 +188,7 @@ public class PieItem {
     }
 
 
+
     public void setPieView(PieView sym) {
         mPieView = sym;
     }
@@ -200,10 +216,19 @@ public class PieItem {
         }
 
 
+
+    public void setIcon(int resId) {
+        ((ImageView)mView).setImageResource(resId);
+    }
+
+
     public void setColor(int color) {
         ImageView imageView = ((ImageView) mView);
         Drawable drawable = imageView.getDrawable();
         drawable.setColorFilter(color, Mode.SRC_ATOP);
+
+
+
 
         imageView.setImageDrawable(drawable);
     }
