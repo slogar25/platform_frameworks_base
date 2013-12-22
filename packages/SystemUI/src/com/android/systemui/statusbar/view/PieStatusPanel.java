@@ -106,7 +106,11 @@ public class PieStatusPanel {
         mContentFrame = (View) mPanel.getBar().mContainer.findViewById(R.id.content_frame);
         mScrollView = (ScrollView) mPanel.getBar().mContainer.findViewById(R.id.content_scroll);
 
+
         mScrollView.setOnTouchListener(new OnTouchListener(){
+
+        mContentFrame.setOnTouchListener(new OnTouchListener(){
+
             final int SCROLLING_DISTANCE_TRIGGER = 100;
             float scrollX;
             float scrollY;
@@ -254,6 +258,12 @@ public class PieStatusPanel {
     private WindowManager.LayoutParams getFlipPanelLayoutParams() {
 
         mPanel.getBar().mContainer.setVisibility(visible ? View.VISIBLE : View.GONE);
+        updatePanelConfiguration();
+    }
+
+    public void updatePanelConfiguration() {
+        int padding = mContext.getResources().getDimensionPixelSize(R.dimen.pie_panel_padding);
+        mScrollView.setPadding(padding,0,padding,0);
     }
 
     public static WindowManager.LayoutParams getFlipPanelLayoutParams() {
