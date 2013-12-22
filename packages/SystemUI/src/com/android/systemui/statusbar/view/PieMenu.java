@@ -528,6 +528,8 @@ public class PieMenu extends FrameLayout {
 
 
     private boolean mNavbarZero;
+    private boolean mUseMenuAlways;
+    private boolean mUseSearch;
 
 
     // Animations
@@ -583,6 +585,8 @@ public class PieMenu extends FrameLayout {
 
         boolean expanded = Settings.System.getInt(mContext.getContentResolver(),
                 Settings.System.EXPANDED_DESKTOP_STATE, 0) == 1;
+        mUseMenuAlways = Settings.System.getInt(mContext.getContentResolver(), Settings.System.PIE_MENU, 0) == 1;
+        mUseSearch = Settings.System.getInt(mContext.getContentResolver(), Settings.System.PIE_SEARCH, 1) == 1;
         mNavbarZero = Integer.parseInt(ExtendedPropertiesUtils.getProperty(
                 "com.android.systemui.navbar.dpi", "100")) == 0 && !expanded;
 
@@ -1270,25 +1274,37 @@ public class PieMenu extends FrameLayout {
 
     }
 
+    private boolean canItemDisplay(PieItem item) {
+        return !(item.getName().equals(PieControl.MENU_BUTTON) && !mPanel.currentAppUsesMenu() && !mUseMenuAlways) &&
+                !(item.getName().equals(PieControl.SEARCH_BUTTON) && !mUseSearch);
+    }
+
     private void layoutPie() {
         float emptyangle = mEmptyAngle * (float)Math.PI / 180;
         int inner = mInnerPieRadius;
         int outer = mOuterPieRadius;
 
+        int itemCount = mItems.size();
+        if (!mPanel.currentAppUsesMenu() && !mUseMenuAlways) itemCount--;
+        if (!mUseSearch) itemCount--;
+
+
         int lesserSweepCount = 0;
         for (PieItem item : mItems) {
-            if (item.isLesser()) {
+            if (item.isLesser() && canItemDisplay(item)) {
                 lesserSweepCount += 1;
             }
         }
 
-        float adjustedSweep = lesserSweepCount > 0 ? (((1-0.65f) * lesserSweepCount) / (mItems.size()-lesserSweepCount)) : 0;    
+        float adjustedSweep = lesserSweepCount > 0 ? (((1-0.65f) * lesserSweepCount) / (itemCount-lesserSweepCount)) : 0;    
         float sweep = 0;
         float angle = 0;
         float total = 0;
 
         for (PieItem item : mItems) {
-            sweep = ((float) (Math.PI - 2 * emptyangle) / mItems.size()) * (item.isLesser() ? 0.65f : 1 + adjustedSweep);
+            if (!canItemDisplay(item)) continue;
+
+            sweep = ((float) (Math.PI - 2 * emptyangle) / itemCount) * (item.isLesser() ? 0.65f : 1 + adjustedSweep);
             angle = (emptyangle + sweep / 2 - (float)Math.PI/2);
             item.setPath(makeSlice(getDegrees(0) - mPieGap, getDegrees(sweep) + mPieGap, outer, inner, mCenter));
             View view = item.getView();
@@ -1660,6 +1676,14 @@ public class PieMenu extends FrameLayout {
 
             // Paint status report only if settings allow
             if (mStatusMode != 0) {
+
+
+
+            // Draw base menu
+            for (PieItem item : mItems) {
+                if (!canItemDisplay(item)) continue;
+                drawItem(canvas, item);
+            }
 
 
             // Paint status report only if settings allow
@@ -2376,6 +2400,7 @@ public class PieMenu extends FrameLayout {
         if (mItems != null) {
             int c = 0;
             for (PieItem item : mItems) {
+                if (!canItemDisplay(item)) continue;
                 if (inside(polar, item)) {
                     return item;
                 }
