@@ -473,12 +473,8 @@ public class PieMenu extends FrameLayout {
 
 
     // Flags
-
     private int mStatusMode;
     private float mPieSize = SIZE_BASE;
-
-    private boolean mPerAppColor;
-
     private boolean mOpen;
 
 
@@ -2114,7 +2110,6 @@ public class PieMenu extends FrameLayout {
             return true;
         } else if (MotionEvent.ACTION_MOVE == action) {
 
-
             boolean snapActive = false;
             for (int i = 0; i < 4; i++) {
                 SnapPoint snap = mSnapPoint[i];                
@@ -2229,17 +2224,6 @@ public class PieMenu extends FrameLayout {
 
 
             if (distanceY < shadeTreshold) mFlipViewState = -1;
-
-
-
-            mGlowOffset = distanceY > shadeTreshold ? (int)(distanceY - shadeTreshold) : 0;
-            
-            // Trigger the shade?
-            if (distanceY > shadeTreshold) {
-                // Give the user a small hint that he's inside the upper touch area
-                if(hapticFeedback) mVibrator.vibrate(2);
-                if(mFlipViewState == 0) mFlipViewState = NOTIFICATIONS_PANEL;
-            }
 
 
             // Check for onEnter separately or'll face constant deselect
