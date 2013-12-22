@@ -1908,12 +1908,8 @@ public class PieMenu extends FrameLayout {
         float y = evt.getRawY();
         float distanceX = mCenter.x-x;
         float distanceY = mCenter.y-y;
-
         mCenterDistance = (float)Math.sqrt(Math.pow(distanceX, 2) + Math.pow(distanceY, 2));
 
-
-
-        float distance = (float)Math.sqrt(Math.pow(distanceX, 2) + Math.pow(distanceY, 2));
 
 
         float shadeTreshold = mRadius + mRadiusInc + mTouchOffset * 7.65f; 
@@ -2244,11 +2240,6 @@ public class PieMenu extends FrameLayout {
                 if(hapticFeedback) mVibrator.vibrate(2);
                 if(mFlipViewState == 0) mFlipViewState = NOTIFICATIONS_PANEL;
             }
-
-
-
-            // Take back shade trigger if user decides to abandon his gesture
-            if (distanceY < shadeTreshold) mFlipViewState = 0;
 
 
             // Check for onEnter separately or'll face constant deselect
