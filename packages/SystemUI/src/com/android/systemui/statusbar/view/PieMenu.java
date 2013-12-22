@@ -276,7 +276,7 @@ public class PieMenu extends FrameLayout {
     private static final int COLOR_BATTERY_JUICE_CRITICAL = 0xff4444;
     private static final int COLOR_BATTERY_BACKGROUND = 0xffffff;
     private static final int COLOR_STATUS = 0xffffff;
-    private static final int BASE_SPEED = 500;
+    private static final int BASE_SPEED = 1000;
     private static final int EMPTY_ANGLE_BASE = 12;
     private static final float SIZE_BASE = 1f;
 
@@ -724,7 +724,7 @@ public class PieMenu extends FrameLayout {
         measureClock(mPolicy.getSimpleTime());
 
         // Determine animationspeed
-        mOverallSpeed = BASE_SPEED * mStatusMode;
+        mOverallSpeed = BASE_SPEED * (mStatusMode == -1 ? 0 : mStatusMode);
 
         // Create animators
         for (int i = 0; i < mAnimators.length; i++) {
@@ -1469,10 +1469,14 @@ public class PieMenu extends FrameLayout {
 
 
             // Draw background
+
             if (mStatusMode != 0 && !mNavbarZero) {
 
                 canvas.drawARGB((int)(mAnimatedFraction[ANIMATOR_DEC_SPEED15] * 0xcc), 0, 0, 0);
 
+
+
+            if (mStatusMode != -1 && !mNavbarZero) {
 
                 canvas.drawARGB((int)(mAnimators[ANIMATOR_DEC_SPEED15].fraction * 0xcc), 0, 0, 0);
 
@@ -1637,7 +1641,7 @@ public class PieMenu extends FrameLayout {
 
 
             // Paint status report only if settings allow
-            if (mStatusMode != 0 && !mNavbarZero) {
+            if (mStatusMode != -1 && !mNavbarZero) {
 
 
                 // Draw chevron rings
