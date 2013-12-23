@@ -885,6 +885,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         });
     }
 
+
     private int updateFlingerOptions() {
         int disableOverlays = 0;
         try {
@@ -921,6 +922,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
     }
 
+
+
     /** {@inheritDoc} */
     @Override
     public void init(Context context, IWindowManager windowManager,
@@ -937,7 +940,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
 
 
+
         mDisableOverlays = updateFlingerOptions();
+
+
         updateHybridLayout();
 
 
