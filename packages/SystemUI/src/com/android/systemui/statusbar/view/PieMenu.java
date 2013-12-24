@@ -280,6 +280,7 @@ public class PieMenu extends FrameLayout {
 
 
 
+
     private static final int EMPTY_ANGLE_BASE = 10;
 
     private static final int EMPTY_ANGLE_BASE = 12;
@@ -289,6 +290,8 @@ public class PieMenu extends FrameLayout {
 
 
     private static final int EMPTY_ANGLE_BASE = 10;
+
+
 
     private static final int CHEVRON_FRAGMENTS = 16;
     private static final float SIZE_BASE = 1.0f;
